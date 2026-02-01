@@ -960,12 +960,16 @@
       // ==========================
       // CAMERA
       // ==========================
+      const zoom = 1.6;
       function updateCamera() {
-        const targetX = player.x + player.w / 2 - canvas.width / 2;
-        cameraX = lerp(cameraX, clamp(targetX, 0, world.width - canvas.width), 0.12);
+        const viewW = canvas.width / zoom;
+        const viewH = canvas.height / zoom;
 
-        // Keep Y steady for now (nice and clean).
-        cameraY = 0;
+        const targetX = player.x + player.w / 2 - viewW / 2;
+        const targetY = player.y + player.h / 2 - viewH / 2;
+
+        cameraX = lerp(cameraX, clamp(targetX, 0, world.width - viewW), 0.12);
+        cameraY = lerp(cameraY, clamp(targetY, 0, world.height - viewH), 0.12);
       }
 
       // ==========================
@@ -1001,6 +1005,7 @@
 
         // Translate to camera
         ctx.save();
+        ctx.scale(zoom, zoom);
         ctx.translate(-cameraX, -cameraY);
 
         // Platforms (static) - rendered as bricks
