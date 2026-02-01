@@ -378,6 +378,7 @@
       let currentLevelIndex = 0;
 
       let score = 0;
+      let scoreAtLevelStart = 0;
       let coinsCollected = 0;
       let lives = 3;
 
@@ -575,9 +576,12 @@
         // UI
         UI.level.textContent = (index + 1);
         UI.coins.textContent = coinsCollected;
-        UI.score.textContent = score;
+        UI.score.textContent = Math.floor(score);
         UI.lives.textContent = lives;
         UI.high.textContent = getHigh();
+
+        // Remember score at start of level for "Restart Level"
+        scoreAtLevelStart = score;
       }
 
       // ==========================
@@ -651,7 +655,7 @@
       }
 
       UI.btnPause.onclick = togglePause;
-      UI.btnRestart.onclick = () => restartLevel();
+      UI.btnRestart.onclick = () => startGame(currentLevelIndex);
       UI.btnMenu.onclick = () => showMenu();
 
       UI.btnResumeFromMenu.onclick = () => {
@@ -662,8 +666,12 @@
       UI.btnResetProgress.onclick = () => {
         localStorage.removeItem(LS.unlocked);
         localStorage.removeItem(LS.high);
+        score = 0;
+        lives = 3;
         buildMenu();
         UI.high.textContent = "0";
+        UI.score.textContent = "0";
+        UI.lives.textContent = "3";
       };
 
       // ==========================
@@ -687,7 +695,8 @@
       }
 
       function restartLevel() {
-        // keep lives/score; reset current level to start spawn (not checkpoint)
+        // revert to score at level start
+        score = scoreAtLevelStart;
         const L = levels[currentLevelIndex];
         world.respawn.x = L.spawn.x;
         world.respawn.y = L.spawn.y;
@@ -870,7 +879,7 @@
           if (stomp) {
             e.alive = false;
             score += 250;
-            UI.score.textContent = score;
+            UI.score.textContent = Math.floor(score);
             player.vy = -physics.jumpVel * 0.60; // bounce
           } else {
             // Player gets hit (unless invulnerable)
@@ -893,7 +902,7 @@
             coinsCollected++;
             score += 100;
             UI.coins.textContent = coinsCollected;
-            UI.score.textContent = score;
+            UI.score.textContent = Math.floor(score);
           }
         }
 
@@ -1153,12 +1162,12 @@
         updateCamera();
 
         // passive score over time (survival/forward motion)
-        score += Math.floor(dt * 50);
-        UI.score.textContent = score;
+        score += dt * 50;
+        UI.score.textContent = Math.floor(score);
 
         // keep high updated (optional)
         const high = getHigh();
-        if (score > high) { setHigh(score); UI.high.textContent = score; }
+        if (score > high) { setHigh(Math.floor(score)); UI.high.textContent = Math.floor(score); }
       }
 
       let last = performance.now();
