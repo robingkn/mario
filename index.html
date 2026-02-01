@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MATLAB Icon Platformer</title>
+  <style>
+    :root { --bg:#0f1220; --fg:#eaeaf2; --accent:#ff7a00; }
+    body { margin:0; background:linear-gradient(180deg,#0f1220,#161a2f); color:var(--fg); font-family:system-ui,Segoe UI,Arial; }
+    .wrap { display:grid; place-items:center; min-height:100vh; padding:16px; box-sizing:border-box; }
+    .hud { width:min(960px, 100%); display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; opacity:.95; }
+    .pill { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:8px 12px; border-radius:999px; }
+    canvas {
+      width:min(960px, 100%);
+      height:auto;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: radial-gradient(1200px 600px at 30% 20%, rgba(255,122,0,.08), transparent 60%),
+                  linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.08));
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      image-rendering: pixelated;
+    }
+    .help { width:min(960px, 100%); margin-top:10px; font-size:14px; opacity:.8; line-height:1.35; }
+    .btns { display:flex; gap:10px; }
+    button {
+      cursor:pointer; color:var(--fg);
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      padding:8px 12px; border-radius:10px;
+    }
+    button:hover { border-color:rgba(255,255,255,.22); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <div class="pill">Score: <b id="score">0</b> &nbsp;|&nbsp; Coins: <b id="coins">0</b></div>
+      <div class="btns">
+        <button id="restart">Restart</button>
+        <button id="pause">Pause</button>
+      </div>
+    </div>
+
+    <!-- Internal canvas resolution stays fixed for consistent physics -->
+    <canvas id="c" width="960" height="540"></canvas>
+
+    <div class="help">
+      Controls: <b>← →</b> move, <b>Space / ↑</b> jump. Collect coins. Avoid spikes. <br/>
+      Tip: If the icon doesn't appear, run a local server (e.g., VS Code “Live Server”).
+    </div>
+  </div>
+
+<script>
+(() => {
+  // =========================
+  // BASIC ENGINE SETUP
+  // =========================
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const UI = {
+    score: document.getElementById('score'),
+    coins: document.getElementById('coins'),
+    restart: document.getElementById('restart'),
+    pause: document.getElementById('pause'),
+  };
+
+  let paused = false;
+
+  // Load MATLAB icon
+  const playerImg = new Image();
+  playerImg.src = "matlab-logo.png";
+  let imgReady = false;
+  playerImg.onload = () => imgReady = true;
+  playerImg.onerror = () => imgReady = false;
+
+  // Input
+  const keys = new Set();
+  addEventListener('keydown', (e) => {
+    // prevent page scrolling on arrows/space
+    if (["ArrowLeft","ArrowRight","ArrowUp","Space"].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+  }, { passive:false });
+  addEventListener('keyup', (e) => keys.delete(e.code));
+
+  // Utility
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const aabb = (A,B) =>
+    A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y;
+
+  // =========================
+  // WORLD / LEVEL DATA
+  // =========================
+  // Units are pixels in canvas internal resolution (960x540).
+  // Level is wider than screen -> camera follows.
+  const level = {
+    width: 2600,
+    height: 540,
+    gravity: 1800,      // px/s^2
+    friction: 0.85,
+    airFriction: 0.94,
+    jumpVel: 700,
+    moveAcc: 2400,
+    maxSpeed: 320
+  };
+
+  // Platforms (rectangles). You can add more to design your own level.
+  // Tip: ground platform is big & low.
+  const platforms = [
+    { x: 0,    y: 490, w: 2600, h: 60 },   // ground
+    { x: 220,  y: 410, w: 160,  h: 22 },
+    { x: 460,  y: 360, w: 180,  h: 22 },
+    { x: 740,  y: 320, w: 140,  h: 22 },
+    { x: 980,  y: 380, w: 220,  h: 22 },
+    { x: 1280, y: 330, w: 160,  h: 22 },
+    { x: 1520, y: 280, w: 190,  h: 22 },
+    { x: 1820, y: 360, w: 220,  h: 22 },
+    { x: 2120, y: 310, w: 170,  h: 22 },
+  ];
+
+  // Spikes/hazards (rectangles)
+  const spikes = [
+    { x: 620,  y: 470, w: 70,  h: 20 },
+    { x: 1200, y: 470, w: 70,  h: 20 },
+    { x: 2000, y: 470, w: 100, h: 20 },
+  ];
+
+  // Coins (circles but we store as small rect for easy collision)
+  const coins = [];
+  function makeCoins() {
+    coins.length = 0;
+    const spots = [
+      [260, 370],[520,320],[780,280],[1020,340],[1300,290],[1550,240],[1850,320],[2150,270],
+      [900, 450],[1700,450],[2300,450]
+    ];
+    for (const [x,y] of spots) {
+      coins.push({ x, y, w: 18, h: 18, taken:false });
+    }
+  }
+
+  // =========================
+  // PLAYER STATE
+  // =========================
+  const player = {
+    x: 80, y: 200,
+    w: 44, h: 44,
+    vx: 0, vy: 0,
+    onGround: false,
+    facing: 1
+  };
+
+  let cameraX = 0;
+  let score = 0;
+  let coinCount = 0;
+
+  function reset() {
+    player.x = 80; player.y = 200;
+    player.vx = 0; player.vy = 0;
+    player.onGround = false;
+    cameraX = 0;
+    score = 0;
+    coinCount = 0;
+    makeCoins();
+    paused = false;
+    UI.pause.textContent = "Pause";
+    UI.score.textContent = score;
+    UI.coins.textContent = coinCount;
+    last = performance.now();
+  }
+
+  UI.restart.onclick = reset;
+  UI.pause.onclick = () => {
+    paused = !paused;
+    UI.pause.textContent = paused ? "Resume" : "Pause";
+    if (!paused) last = performance.now();
+  };
+
+  // =========================
+  // PHYSICS / COLLISION
+  // =========================
+  function moveAndCollide(dt) {
+    // Horizontal input
+    const left = keys.has("ArrowLeft");
+    const right = keys.has("ArrowRight");
+    const wantJump = keys.has("Space") || keys.has("ArrowUp");
+
+    if (left)  { player.vx -= level.moveAcc * dt; player.facing = -1; }
+    if (right) { player.vx += level.moveAcc * dt; player.facing =  1; }
+    player.vx = clamp(player.vx, -level.maxSpeed, level.maxSpeed);
+
+    // Jump: only when on ground
+    if (wantJump && player.onGround) {
+      player.vy = -level.jumpVel;
+      player.onGround = false;
+    }
+
+    // Apply gravity
+    player.vy += level.gravity * dt;
+
+    // Apply friction
+    if (player.onGround) player.vx *= Math.pow(level.friction, dt*60);
+    else player.vx *= Math.pow(level.airFriction, dt*60);
+
+    // --- Horizontal move + resolve ---
+    player.x += player.vx * dt;
+    // Keep within level bounds
+    player.x = clamp(player.x, 0, level.width - player.w);
+
+    // Collide with platforms horizontally
+    for (const p of platforms) {
+      if (!aabb(player, p)) continue;
+      // resolve based on movement direction
+      if (player.vx > 0) player.x = p.x - player.w;
+      else if (player.vx < 0) player.x = p.x + p.w;
+      player.vx = 0;
+    }
+
+    // --- Vertical move + resolve ---
+    player.y += player.vy * dt;
+    player.onGround = false;
+
+    for (const p of platforms) {
+      if (!aabb(player, p)) continue;
+
+      if (player.vy > 0) {
+        // falling onto platform
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      } else if (player.vy < 0) {
+        // hitting underside
+        player.y = p.y + p.h;
+        player.vy = 0;
+      }
+    }
+
+    // Fall out of world = reset
+    if (player.y > level.height + 200) reset();
+  }
+
+  function updateCamera() {
+    const target = player.x + player.w/2 - canvas.width/2;
+    cameraX += (target - cameraX) * 0.10; // smooth follow
+    cameraX = clamp(cameraX, 0, level.width - canvas.width);
+  }
+
+  // =========================
+  // GAME LOGIC
+  // =========================
+  function updateGame(dt) {
+    moveAndCollide(dt);
+    updateCamera();
+
+    // Coins
+    for (const c of coins) {
+      if (c.taken) continue;
+      if (aabb(player, c)) {
+        c.taken = true;
+        coinCount++;
+        score += 100;
+        UI.coins.textContent = coinCount;
+        UI.score.textContent = score;
+      }
+    }
+
+    // Spikes -> reset
+    for (const s of spikes) {
+      if (aabb(player, s)) {
+        // small penalty, then reset
+        score = Math.max(0, score - 150);
+        UI.score.textContent = score;
+        reset();
+        return;
+      }
+    }
+
+    // Passive score over time (survival)
+    score += Math.floor(dt * 60);
+    UI.score.textContent = score;
+  }
+
+  // =========================
+  // RENDERING
+  // =========================
+  function draw() {
+    // background
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Parallax-ish stripes
+    ctx.save();
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "#ffffff";
+    for (let i=0;i<16;i++){
+      const x = (i*140 - (cameraX*0.2)%140);
+      ctx.fillRect(x, 0, 40, canvas.height);
+    }
+    ctx.restore();
+
+    // world translate (camera)
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+
+    // Platforms
+    for (const p of platforms) {
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.strokeRect(p.x+0.5, p.y+0.5, p.w-1, p.h-1);
+    }
+
+    // Spikes
+    for (const s of spikes) {
+      ctx.fillStyle = "rgba(255, 60, 60, 0.9)";
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      // triangle teeth
+      ctx.fillStyle = "rgba(255, 210, 210, 0.9)";
+      const teeth = Math.floor(s.w / 10);
+      for (let i=0;i<teeth;i++){
+        const tx = s.x + i*10;
+        ctx.beginPath();
+        ctx.moveTo(tx, s.y+s.h);
+        ctx.lineTo(tx+5, s.y);
+        ctx.lineTo(tx+10, s.y+s.h);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // Coins
+    for (const c of coins) {
+      if (c.taken) continue;
+      const cx = c.x + c.w/2, cy = c.y + c.h/2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(255, 200, 0, 0.95)";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.stroke();
+    }
+
+    // Player: draw MATLAB icon; fallback to simple shape if image not loaded
+    if (imgReady) {
+      ctx.save();
+      // slight squash when on ground (nice feel)
+      const squash = player.onGround ? 1.0 : 1.0;
+      ctx.translate(player.x + player.w/2, player.y + player.h/2);
+      ctx.scale(player.facing, 1); // flip left/right
+      ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h*squash);
+      ctx.restore();
+    } else {
+      // fallback "icon" (orange diamond)
+      ctx.fillStyle = "#ff7a00";
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.w/2, player.y);
+      ctx.lineTo(player.x + player.w, player.y + player.h/2);
+      ctx.lineTo(player.x + player.w/2, player.y + player.h);
+      ctx.lineTo(player.x, player.y + player.h/2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    // Minimal pause overlay
+    if (paused) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = "white";
+      ctx.font = "700 34px system-ui, Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("Paused", canvas.width/2, canvas.height/2);
+      ctx.font = "400 16px system-ui, Segoe UI, Arial";
+      ctx.fillText("Press Resume to continue", canvas.width/2, canvas.height/2 + 30);
+      ctx.restore();
+    }
+  }
+
+  // =========================
+  // MAIN LOOP
+  // =========================
+  let last = performance.now();
+  function loop(t) {
+    const dt = Math.min(0.033, (t - last) / 1000); // cap dt for stability
+    last = t;
+
+    if (!paused) updateGame(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+  }
+
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
