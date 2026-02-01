@@ -207,7 +207,8 @@
         <span>Score: <b id="uiScore">0</b></span>
         <span>Coins: <b id="uiCoins">0</b></span>
         <span>Lives: <b id="uiLives">3</b></span>
-        <span>High: <b id="uiHigh">0</b></span>
+        <span>Time: <b id="uiTime">400</b></span>
+        <span>High: <b id="uiHigh">000000</b></span>
       </div>
       <div class="btns">
         <button id="btnMenu">Menu</button>
@@ -286,6 +287,7 @@
         msgBody: document.getElementById('msgBody'),
         msgPrimary: document.getElementById('msgPrimary'),
         msgSecondary: document.getElementById('msgSecondary'),
+        time: document.getElementById('uiTime'),
         touch: document.getElementById('touch'),
         tLeft: document.getElementById('tLeft'),
         tRight: document.getElementById('tRight'),
@@ -337,6 +339,7 @@
       // ==========================
       const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
       const lerp = (a, b, t) => a + (b - a) * t;
+      const fmtScore = (n) => String(Math.floor(n)).padStart(6, '0');
 
       const aabb = (A, B) =>
         A.x < B.x + B.w && A.x + A.w > B.x &&
@@ -553,6 +556,8 @@
 
           // respawn point starts at spawn; updates when checkpoint touched
           respawn: { x: L.spawn.x, y: L.spawn.y },
+
+          timeLeft: 400,
         };
 
         // reset player
@@ -576,9 +581,10 @@
         // UI
         UI.level.textContent = (index + 1);
         UI.coins.textContent = coinsCollected;
-        UI.score.textContent = Math.floor(score);
+        UI.score.textContent = fmtScore(score);
         UI.lives.textContent = lives;
-        UI.high.textContent = getHigh();
+        UI.time.textContent = Math.floor(world.timeLeft);
+        UI.high.textContent = fmtScore(getHigh());
 
         // Remember score at start of level for "Restart Level"
         scoreAtLevelStart = score;
@@ -723,10 +729,10 @@
 
         if (lives <= 0) {
           const high = getHigh();
-          if (score > high) setHigh(score);
-          UI.high.textContent = getHigh();
+          if (score > high) setHigh(Math.floor(score));
+          UI.high.textContent = fmtScore(getHigh());
 
-          showMessage("Game Over", `Score: ${score}. ${reason || ""}`.trim(),
+          showMessage("Game Over", `Score: ${fmtScore(score)}. ${reason || ""}`.trim(),
             "Restart", () => startGame(0),
             "Menu", () => showMenu()
           );
@@ -878,8 +884,8 @@
 
           if (stomp) {
             e.alive = false;
-            score += 250;
-            UI.score.textContent = Math.floor(score);
+            score += 100; // Mario Goomba score
+            UI.score.textContent = fmtScore(score);
             player.vy = -physics.jumpVel * 0.60; // bounce
           } else {
             // Player gets hit (unless invulnerable)
@@ -900,9 +906,9 @@
           if (aabb(player, c)) {
             c.taken = true;
             coinsCollected++;
-            score += 100;
+            score += 200; // Mario Coin score
             UI.coins.textContent = coinsCollected;
-            UI.score.textContent = Math.floor(score);
+            UI.score.textContent = fmtScore(score);
           }
         }
 
@@ -924,6 +930,10 @@
 
         // Goal: finish level
         if (aabb(player, world.goal)) {
+          // Time bonus
+          const bonus = Math.floor(world.timeLeft) * 50;
+          score += bonus;
+
           const next = currentLevelIndex + 1;
           const unlocked = getUnlocked();
           if (next + 1 > unlocked && next < levels.length) {
@@ -938,7 +948,7 @@
           if (next < levels.length) {
             showMessage(
               "Level Complete!",
-              `Nice. Score: ${score}. Next level unlocked.`,
+              `Score: ${fmtScore(score)} (incl. ${bonus} time bonus).`,
               "Next Level",
               () => { paused = false; state = "playing"; loadLevel(next); last = performance.now(); },
               "Menu",
@@ -947,7 +957,7 @@
           } else {
             showMessage(
               "All Levels Complete!",
-              `You finished all levels. Final score: ${score}.`,
+              `Final score: ${fmtScore(score)} (incl. ${bonus} bonus).`,
               "Play Again",
               () => startGame(0),
               "Menu",
@@ -1226,13 +1236,16 @@
         handlePickupsAndHazards();
         updateCamera();
 
-        // passive score over time (survival/forward motion)
-        score += dt * 50;
-        UI.score.textContent = Math.floor(score);
+        // Timer
+        world.timeLeft -= dt * 2.5; // Count down approx 2.5x speed for urgency
+        UI.time.textContent = Math.max(0, Math.floor(world.timeLeft));
+        if (world.timeLeft <= 0) {
+          loseLife("Time's up!");
+        }
 
         // keep high updated (optional)
         const high = getHigh();
-        if (score > high) { setHigh(Math.floor(score)); UI.high.textContent = Math.floor(score); }
+        if (score > high) { setHigh(Math.floor(score)); UI.high.textContent = fmtScore(score); }
       }
 
       let last = performance.now();
