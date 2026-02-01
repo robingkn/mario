@@ -196,6 +196,43 @@
         display: flex;
       }
     }
+
+    canvas:fullscreen,
+    .wrap:fullscreen canvas {
+      border-radius: 0;
+      border: none;
+      height: 100vh;
+      width: auto;
+      margin: 0 auto;
+    }
+
+    .wrap:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--bg1);
+    }
+
+    .wrap:fullscreen .topbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 100;
+    }
+
+    .wrap:fullscreen .help {
+      display: none;
+    }
+
+    .wrap:fullscreen .overlay {
+      position: absolute;
+      /* Needed for full-screen centering */
+      z-index: 200;
+    }
   </style>
 </head>
 
@@ -204,7 +241,7 @@
     <div class="topbar">
       <div class="pill">
         <span>Level: <b id="uiLevel">1</b></span>
-        <span>Score: <b id="uiScore">0</b></span>
+        <span>Score: <b id="uiScore">000000</b></span>
         <span>Coins: <b id="uiCoins">0</b></span>
         <span>Lives: <b id="uiLives">3</b></span>
         <span>Time: <b id="uiTime">400</b></span>
@@ -214,6 +251,7 @@
         <button id="btnMenu">Menu</button>
         <button id="btnRestart">Restart</button>
         <button id="btnPause">Pause</button>
+        <button id="btnFull">Full Screen</button>
       </div>
     </div>
 
@@ -223,29 +261,30 @@
       Controls: <b>← →</b> move, <b>Space / ↑</b> jump, <b>Esc</b> pause. <br />
       Mobile: use on-screen buttons. Touch the checkpoint marker to set respawn.
     </div>
-  </div>
 
-  <!-- Overlays -->
-  <div class="overlay" id="overlayMenu">
-    <div class="card">
-      <h1>Super Mario Platformer</h1>
-      <p>Pick a level. Finish a level to unlock the next. Your high score is saved locally.</p>
-      <div class="grid" id="levelGrid"></div>
-      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-        <button id="btnResumeFromMenu">Resume</button>
-        <button id="btnResetProgress">Reset Progress</button>
+    <!-- Overlays inside wrap for Full Screen support -->
+    <div class="overlay" id="overlayMenu">
+      <div class="card">
+        <h1>Super Mario Platformer</h1>
+        <p>Pick a level. Finish a level to unlock the next. Your high score is saved locally.</p>
+        <div class="grid" id="levelGrid"></div>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button id="btnResumeFromMenu">Resume</button>
+          <button id="btnResetProgress">Reset Progress</button>
+        </div>
+        <p style="margin-top:10px; font-size:13px;">Assets: <b>player.png</b> and <b>enemy.png</b> should be present.
+        </p>
       </div>
-      <p style="margin-top:10px; font-size:13px;">Assets: <b>player.png</b> and <b>enemy.png</b> should be present.</p>
     </div>
-  </div>
 
-  <div class="overlay" id="overlayMsg">
-    <div class="card">
-      <h1 id="msgTitle">Paused</h1>
-      <p id="msgBody">—</p>
-      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-        <button id="msgPrimary">Continue</button>
-        <button id="msgSecondary">Menu</button>
+    <div class="overlay" id="overlayMsg">
+      <div class="card">
+        <h1 id="msgTitle">Paused</h1>
+        <p id="msgBody">—</p>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button id="msgPrimary">Continue</button>
+          <button id="msgSecondary">Menu</button>
+        </div>
       </div>
     </div>
   </div>
@@ -287,6 +326,7 @@
         msgBody: document.getElementById('msgBody'),
         msgPrimary: document.getElementById('msgPrimary'),
         msgSecondary: document.getElementById('msgSecondary'),
+        btnFull: document.getElementById('btnFull'),
         time: document.getElementById('uiTime'),
         touch: document.getElementById('touch'),
         tLeft: document.getElementById('tLeft'),
@@ -663,6 +703,21 @@
       UI.btnPause.onclick = togglePause;
       UI.btnRestart.onclick = () => startGame(currentLevelIndex);
       UI.btnMenu.onclick = () => showMenu();
+
+      UI.btnFull.onclick = () => {
+        const wrap = document.querySelector('.wrap');
+        if (!document.fullscreenElement) {
+          wrap.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      };
+
+      document.addEventListener('fullscreenchange', () => {
+        UI.btnFull.textContent = document.fullscreenElement ? "Exit Full" : "Full Screen";
+      });
 
       UI.btnResumeFromMenu.onclick = () => {
         UI.overlayMenu.style.display = "none";
