@@ -1034,38 +1034,78 @@
           ctx.stroke();
         }
 
-        // Spikes
+        // Thorns (Spikes) - Metallic Sharp Look
         for (const s of world.spikes) {
-          ctx.fillStyle = "rgba(255,60,60,0.95)";
-          roundedRect(s.x, s.y, s.w, s.h, 8);
-          ctx.fill();
+          ctx.save();
+          const grad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
+          grad.addColorStop(0, "#444");
+          grad.addColorStop(0.5, "#999");
+          grad.addColorStop(1, "#222");
+          ctx.fillStyle = grad;
+          ctx.fillRect(s.x, s.y + s.h - 5, s.w, 5); // Base
 
-          // teeth
-          ctx.fillStyle = "rgba(255,220,220,0.95)";
-          const teeth = Math.floor(s.w / 10);
-          for (let i = 0; i < teeth; i++) {
-            const tx = s.x + i * 10;
+          const teethCount = Math.floor(s.w / 12);
+          const toothW = s.w / teethCount;
+          for (let i = 0; i < teethCount; i++) {
+            const tx = s.x + i * toothW;
             ctx.beginPath();
             ctx.moveTo(tx, s.y + s.h);
-            ctx.lineTo(tx + 5, s.y);
-            ctx.lineTo(tx + 10, s.y + s.h);
+            ctx.lineTo(tx + toothW / 2, s.y);
+            ctx.lineTo(tx + toothW, s.y + s.h);
             ctx.closePath();
+
+            const toothGrad = ctx.createLinearGradient(tx, s.y, tx + toothW, s.y);
+            toothGrad.addColorStop(0, "#888");
+            toothGrad.addColorStop(0.5, "#fff");
+            toothGrad.addColorStop(1, "#444");
+            ctx.fillStyle = toothGrad;
             ctx.fill();
+
+            ctx.strokeStyle = "rgba(0,0,0,0.3)";
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
           }
+          ctx.restore();
         }
 
-        // Coins
+        // Coins - Rotating 3D effect
+        const coinTime = performance.now() / 200;
         for (const c of world.coins) {
           if (c.taken) continue;
           const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+          const rot = Math.abs(Math.sin(coinTime)); // Fake rotation width
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.scale(rot, 1);
+
+          // Coin body
           ctx.beginPath();
-          ctx.arc(cx, cy, 9, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(255, 200, 0, 0.95)";
+          ctx.arc(0, 0, 10, 0, Math.PI * 2);
+          const cGrad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 10);
+          cGrad.addColorStop(0, "#fff700");
+          cGrad.addColorStop(1, "#ff8800");
+          ctx.fillStyle = cGrad;
           ctx.fill();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+
+          // Inner detail
+          ctx.strokeStyle = "rgba(0,0,0,0.2)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, 7, 0, Math.PI * 2);
           ctx.stroke();
+
+          // Vertical line detail
+          ctx.fillStyle = "rgba(0,0,0,0.2)";
+          ctx.fillRect(-1, -5, 2, 10);
+
+          ctx.restore();
+
+          // Glow
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = "rgba(255, 230, 0, 0.5)";
         }
+        ctx.shadowBlur = 0;
 
         // Checkpoint marker
         {
@@ -1084,21 +1124,41 @@
           ctx.stroke();
         }
 
-        // Goal portal/marker
+        // Goal - Mario Pipe
         {
           const g = world.goal;
           ctx.save();
-          ctx.globalAlpha = 0.95;
-          ctx.fillStyle = "rgba(45,227,140,0.12)";
-          ctx.beginPath();
-          ctx.ellipse(g.x + g.w / 2, g.y + g.h / 2, 36, 44, 0, 0, Math.PI * 2);
-          ctx.fill();
 
-          ctx.strokeStyle = "rgba(45,227,140,0.65)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.ellipse(g.x + g.w / 2, g.y + g.h / 2, 30, 38, 0, 0, Math.PI * 2);
-          ctx.stroke();
+          // Pipe Body
+          const pGrad = ctx.createLinearGradient(g.x, g.y, g.x + g.w, g.y);
+          pGrad.addColorStop(0, "#006400");
+          pGrad.addColorStop(0.3, "#32CD32");
+          pGrad.addColorStop(0.5, "#90EE90");
+          pGrad.addColorStop(0.7, "#32CD32");
+          pGrad.addColorStop(1, "#006400");
+
+          ctx.fillStyle = pGrad;
+          ctx.fillRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
+          ctx.strokeStyle = "rgba(0,0,0,0.4)";
+          ctx.strokeRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
+
+          // Pipe Top (Lip)
+          ctx.fillStyle = pGrad;
+          ctx.fillRect(g.x, g.y, g.w, 15);
+          ctx.strokeRect(g.x, g.y, g.w, 15);
+
+          // Inner Darkness (The hole)
+          ctx.fillStyle = "rgba(0,0,0,0.6)";
+          ctx.fillRect(g.x + 4, g.y + 2, g.w - 8, 4);
+
+          // Glow from the pipe
+          const glow = Math.sin(performance.now() / 300) * 10 + 20;
+          ctx.shadowBlur = glow;
+          ctx.shadowColor = "#32CD32";
+          ctx.strokeStyle = "rgba(50, 205, 50, 0.5)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(g.x, g.y, g.w, 15);
+
           ctx.restore();
         }
 
