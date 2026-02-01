@@ -1,399 +1,1193 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MATLAB Icon Platformer</title>
+  <title>Super Mario Platformer</title>
   <style>
-    :root { --bg:#0f1220; --fg:#eaeaf2; --accent:#ff7a00; }
-    body { margin:0; background:linear-gradient(180deg,#0f1220,#161a2f); color:var(--fg); font-family:system-ui,Segoe UI,Arial; }
-    .wrap { display:grid; place-items:center; min-height:100vh; padding:16px; box-sizing:border-box; }
-    .hud { width:min(960px, 100%); display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; opacity:.95; }
-    .pill { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:8px 12px; border-radius:999px; }
-    canvas {
-      width:min(960px, 100%);
-      height:auto;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: radial-gradient(1200px 600px at 30% 20%, rgba(255,122,0,.08), transparent 60%),
-                  linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.08));
-      box-shadow: 0 20px 60px rgba(0,0,0,.45);
-      image-rendering: pixelated;
+    :root {
+      --bg1: #5c94fc;
+      --bg2: #b4e2ff;
+      --panel: rgba(0, 0, 0, .2);
+      --panel2: rgba(255, 255, 255, .1);
+      --fg: #ffffff;
+      --muted: rgba(255, 255, 255, .8);
+      --accent: #ffdb15;
+      --danger: #ff3c3c;
+      --good: #2de38c;
     }
-    .help { width:min(960px, 100%); margin-top:10px; font-size:14px; opacity:.8; line-height:1.35; }
-    .btns { display:flex; gap:10px; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, Segoe UI, Arial;
+      color: var(--fg);
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow: hidden;
+    }
+
+    .wrap {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, .14);
+      padding: 8px 12px;
+      border-radius: 999px;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .pill b {
+      color: #fff;
+    }
+
+    .btns {
+      display: flex;
+      gap: 10px;
+    }
+
     button {
-      cursor:pointer; color:var(--fg);
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      padding:8px 12px; border-radius:10px;
+      cursor: pointer;
+      color: var(--fg);
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, .14);
+      padding: 9px 12px;
+      border-radius: 12px;
+      transition: transform .06s ease, border-color .15s ease;
+      backdrop-filter: blur(10px);
     }
-    button:hover { border-color:rgba(255,255,255,.22); }
+
+    button:hover {
+      border-color: rgba(255, 255, 255, .25);
+    }
+
+    button:active {
+      transform: scale(.98);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(0, 0, 0, .10));
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .45);
+      display: block;
+    }
+
+    .help {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Overlay screens (menu / pause / win / gameover) */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
+    }
+
+    .card {
+      width: min(720px, 100%);
+      background: rgba(92, 148, 252, .95);
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 24px 90px rgba(0, 0, 0, .55);
+    }
+
+    .card h1 {
+      margin: 8px 0 0;
+      font-size: 24px;
+    }
+
+    .card p {
+      margin: 8px 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .levelBtn {
+      text-align: left;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    .levelBtn.locked {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .levelBtn .tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    /* Mobile touch controls */
+    .touch {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 12px;
+      display: none;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      z-index: 9;
+      pointer-events: none;
+    }
+
+    .touch .cluster {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .touch button {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      font-size: 20px;
+      background: rgba(255, 255, 255, .10);
+    }
+
+    @media (max-width: 780px) {
+      .touch {
+        display: flex;
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div class="hud">
-      <div class="pill">Score: <b id="score">0</b> &nbsp;|&nbsp; Coins: <b id="coins">0</b></div>
+    <div class="topbar">
+      <div class="pill">
+        <span>Level: <b id="uiLevel">1</b></span>
+        <span>Score: <b id="uiScore">0</b></span>
+        <span>Coins: <b id="uiCoins">0</b></span>
+        <span>Lives: <b id="uiLives">3</b></span>
+        <span>High: <b id="uiHigh">0</b></span>
+      </div>
       <div class="btns">
-        <button id="restart">Restart</button>
-        <button id="pause">Pause</button>
+        <button id="btnMenu">Menu</button>
+        <button id="btnRestart">Restart</button>
+        <button id="btnPause">Pause</button>
       </div>
     </div>
 
-    <!-- Internal canvas resolution stays fixed for consistent physics -->
-    <canvas id="c" width="960" height="540"></canvas>
+    <canvas id="c" width="1000" height="560"></canvas>
 
     <div class="help">
-      Controls: <b>← →</b> move, <b>Space / ↑</b> jump. Collect coins. Avoid spikes. <br/>
-      Tip: If the icon doesn't appear, run a local server (e.g., VS Code “Live Server”).
+      Controls: <b>← →</b> move, <b>Space / ↑</b> jump, <b>Esc</b> pause. <br />
+      Mobile: use on-screen buttons. Touch the checkpoint marker to set respawn.
     </div>
   </div>
 
-<script>
-(() => {
-  // =========================
-  // BASIC ENGINE SETUP
-  // =========================
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
+  <!-- Overlays -->
+  <div class="overlay" id="overlayMenu">
+    <div class="card">
+      <h1>Super Mario Platformer</h1>
+      <p>Pick a level. Finish a level to unlock the next. Your high score is saved locally.</p>
+      <div class="grid" id="levelGrid"></div>
+      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+        <button id="btnResumeFromMenu">Resume</button>
+        <button id="btnResetProgress">Reset Progress</button>
+      </div>
+      <p style="margin-top:10px; font-size:13px;">Assets: <b>player.png</b> and <b>enemy.png</b> should be present.</p>
+    </div>
+  </div>
 
-  const UI = {
-    score: document.getElementById('score'),
-    coins: document.getElementById('coins'),
-    restart: document.getElementById('restart'),
-    pause: document.getElementById('pause'),
-  };
+  <div class="overlay" id="overlayMsg">
+    <div class="card">
+      <h1 id="msgTitle">Paused</h1>
+      <p id="msgBody">—</p>
+      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+        <button id="msgPrimary">Continue</button>
+        <button id="msgSecondary">Menu</button>
+      </div>
+    </div>
+  </div>
 
-  let paused = false;
+  <!-- Touch controls -->
+  <div class="touch" id="touch">
+    <div class="cluster">
+      <button id="tLeft">◀</button>
+      <button id="tRight">▶</button>
+    </div>
+    <div class="cluster">
+      <button id="tJump">⤒</button>
+    </div>
+  </div>
 
-  // Load MATLAB icon
-  const playerImg = new Image();
-  playerImg.src = "matlab-logo.png";
-  let imgReady = false;
-  playerImg.onload = () => imgReady = true;
-  playerImg.onerror = () => imgReady = false;
+  <script>
+    (() => {
+      // ==========================
+      // UI
+      // ==========================
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
 
-  // Input
-  const keys = new Set();
-  addEventListener('keydown', (e) => {
-    // prevent page scrolling on arrows/space
-    if (["ArrowLeft","ArrowRight","ArrowUp","Space"].includes(e.code)) e.preventDefault();
-    keys.add(e.code);
-  }, { passive:false });
-  addEventListener('keyup', (e) => keys.delete(e.code));
+      const UI = {
+        level: document.getElementById('uiLevel'),
+        score: document.getElementById('uiScore'),
+        coins: document.getElementById('uiCoins'),
+        lives: document.getElementById('uiLives'),
+        high: document.getElementById('uiHigh'),
+        btnMenu: document.getElementById('btnMenu'),
+        btnRestart: document.getElementById('btnRestart'),
+        btnPause: document.getElementById('btnPause'),
+        overlayMenu: document.getElementById('overlayMenu'),
+        levelGrid: document.getElementById('levelGrid'),
+        btnResumeFromMenu: document.getElementById('btnResumeFromMenu'),
+        btnResetProgress: document.getElementById('btnResetProgress'),
+        overlayMsg: document.getElementById('overlayMsg'),
+        msgTitle: document.getElementById('msgTitle'),
+        msgBody: document.getElementById('msgBody'),
+        msgPrimary: document.getElementById('msgPrimary'),
+        msgSecondary: document.getElementById('msgSecondary'),
+        touch: document.getElementById('touch'),
+        tLeft: document.getElementById('tLeft'),
+        tRight: document.getElementById('tRight'),
+        tJump: document.getElementById('tJump'),
+      };
 
-  // Utility
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const aabb = (A,B) =>
-    A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y;
+      // ==========================
+      // STORAGE
+      // ==========================
+      const LS = {
+        unlocked: "mario_platformer_unlocked",
+        high: "mario_platformer_high"
+      };
+      const getUnlocked = () => Number(localStorage.getItem(LS.unlocked) || "1");
+      const setUnlocked = (n) => localStorage.setItem(LS.unlocked, String(n));
+      const getHigh = () => Number(localStorage.getItem(LS.high) || "0");
+      const setHigh = (n) => localStorage.setItem(LS.high, String(n));
 
-  // =========================
-  // WORLD / LEVEL DATA
-  // =========================
-  // Units are pixels in canvas internal resolution (960x540).
-  // Level is wider than screen -> camera follows.
-  const level = {
-    width: 2600,
-    height: 540,
-    gravity: 1800,      // px/s^2
-    friction: 0.85,
-    airFriction: 0.94,
-    jumpVel: 700,
-    moveAcc: 2400,
-    maxSpeed: 320
-  };
+      // ==========================
+      // INPUT
+      // ==========================
+      const keys = new Set();
+      const press = (code) => keys.add(code);
+      const release = (code) => keys.delete(code);
 
-  // Platforms (rectangles). You can add more to design your own level.
-  // Tip: ground platform is big & low.
-  const platforms = [
-    { x: 0,    y: 490, w: 2600, h: 60 },   // ground
-    { x: 220,  y: 410, w: 160,  h: 22 },
-    { x: 460,  y: 360, w: 180,  h: 22 },
-    { x: 740,  y: 320, w: 140,  h: 22 },
-    { x: 980,  y: 380, w: 220,  h: 22 },
-    { x: 1280, y: 330, w: 160,  h: 22 },
-    { x: 1520, y: 280, w: 190,  h: 22 },
-    { x: 1820, y: 360, w: 220,  h: 22 },
-    { x: 2120, y: 310, w: 170,  h: 22 },
-  ];
+      addEventListener('keydown', (e) => {
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "Escape"].includes(e.code)) e.preventDefault();
+        if (e.code === "Escape") togglePause();
+        keys.add(e.code);
+      }, { passive: false });
 
-  // Spikes/hazards (rectangles)
-  const spikes = [
-    { x: 620,  y: 470, w: 70,  h: 20 },
-    { x: 1200, y: 470, w: 70,  h: 20 },
-    { x: 2000, y: 470, w: 100, h: 20 },
-  ];
+      addEventListener('keyup', (e) => keys.delete(e.code));
 
-  // Coins (circles but we store as small rect for easy collision)
-  const coins = [];
-  function makeCoins() {
-    coins.length = 0;
-    const spots = [
-      [260, 370],[520,320],[780,280],[1020,340],[1300,290],[1550,240],[1850,320],[2150,270],
-      [900, 450],[1700,450],[2300,450]
-    ];
-    for (const [x,y] of spots) {
-      coins.push({ x, y, w: 18, h: 18, taken:false });
-    }
-  }
+      // Touch buttons map to keyboard codes
+      const bindTouch = (btn, code) => {
+        const down = (e) => { e.preventDefault(); press(code); };
+        const up = (e) => { e.preventDefault(); release(code); };
+        btn.addEventListener('pointerdown', down, { passive: false });
+        btn.addEventListener('pointerup', up, { passive: false });
+        btn.addEventListener('pointercancel', up, { passive: false });
+        btn.addEventListener('pointerleave', up, { passive: false });
+      };
+      bindTouch(UI.tLeft, "ArrowLeft");
+      bindTouch(UI.tRight, "ArrowRight");
+      bindTouch(UI.tJump, "Space");
 
-  // =========================
-  // PLAYER STATE
-  // =========================
-  const player = {
-    x: 80, y: 200,
-    w: 44, h: 44,
-    vx: 0, vy: 0,
-    onGround: false,
-    facing: 1
-  };
+      // ==========================
+      // UTILITIES
+      // ==========================
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const lerp = (a, b, t) => a + (b - a) * t;
 
-  let cameraX = 0;
-  let score = 0;
-  let coinCount = 0;
+      const aabb = (A, B) =>
+        A.x < B.x + B.w && A.x + A.w > B.x &&
+        A.y < B.y + B.h && A.y + A.h > B.y;
 
-  function reset() {
-    player.x = 80; player.y = 200;
-    player.vx = 0; player.vy = 0;
-    player.onGround = false;
-    cameraX = 0;
-    score = 0;
-    coinCount = 0;
-    makeCoins();
-    paused = false;
-    UI.pause.textContent = "Pause";
-    UI.score.textContent = score;
-    UI.coins.textContent = coinCount;
-    last = performance.now();
-  }
-
-  UI.restart.onclick = reset;
-  UI.pause.onclick = () => {
-    paused = !paused;
-    UI.pause.textContent = paused ? "Resume" : "Pause";
-    if (!paused) last = performance.now();
-  };
-
-  // =========================
-  // PHYSICS / COLLISION
-  // =========================
-  function moveAndCollide(dt) {
-    // Horizontal input
-    const left = keys.has("ArrowLeft");
-    const right = keys.has("ArrowRight");
-    const wantJump = keys.has("Space") || keys.has("ArrowUp");
-
-    if (left)  { player.vx -= level.moveAcc * dt; player.facing = -1; }
-    if (right) { player.vx += level.moveAcc * dt; player.facing =  1; }
-    player.vx = clamp(player.vx, -level.maxSpeed, level.maxSpeed);
-
-    // Jump: only when on ground
-    if (wantJump && player.onGround) {
-      player.vy = -level.jumpVel;
-      player.onGround = false;
-    }
-
-    // Apply gravity
-    player.vy += level.gravity * dt;
-
-    // Apply friction
-    if (player.onGround) player.vx *= Math.pow(level.friction, dt*60);
-    else player.vx *= Math.pow(level.airFriction, dt*60);
-
-    // --- Horizontal move + resolve ---
-    player.x += player.vx * dt;
-    // Keep within level bounds
-    player.x = clamp(player.x, 0, level.width - player.w);
-
-    // Collide with platforms horizontally
-    for (const p of platforms) {
-      if (!aabb(player, p)) continue;
-      // resolve based on movement direction
-      if (player.vx > 0) player.x = p.x - player.w;
-      else if (player.vx < 0) player.x = p.x + p.w;
-      player.vx = 0;
-    }
-
-    // --- Vertical move + resolve ---
-    player.y += player.vy * dt;
-    player.onGround = false;
-
-    for (const p of platforms) {
-      if (!aabb(player, p)) continue;
-
-      if (player.vy > 0) {
-        // falling onto platform
-        player.y = p.y - player.h;
-        player.vy = 0;
-        player.onGround = true;
-      } else if (player.vy < 0) {
-        // hitting underside
-        player.y = p.y + p.h;
-        player.vy = 0;
-      }
-    }
-
-    // Fall out of world = reset
-    if (player.y > level.height + 200) reset();
-  }
-
-  function updateCamera() {
-    const target = player.x + player.w/2 - canvas.width/2;
-    cameraX += (target - cameraX) * 0.10; // smooth follow
-    cameraX = clamp(cameraX, 0, level.width - canvas.width);
-  }
-
-  // =========================
-  // GAME LOGIC
-  // =========================
-  function updateGame(dt) {
-    moveAndCollide(dt);
-    updateCamera();
-
-    // Coins
-    for (const c of coins) {
-      if (c.taken) continue;
-      if (aabb(player, c)) {
-        c.taken = true;
-        coinCount++;
-        score += 100;
-        UI.coins.textContent = coinCount;
-        UI.score.textContent = score;
-      }
-    }
-
-    // Spikes -> reset
-    for (const s of spikes) {
-      if (aabb(player, s)) {
-        // small penalty, then reset
-        score = Math.max(0, score - 150);
-        UI.score.textContent = score;
-        reset();
-        return;
-      }
-    }
-
-    // Passive score over time (survival)
-    score += Math.floor(dt * 60);
-    UI.score.textContent = score;
-  }
-
-  // =========================
-  // RENDERING
-  // =========================
-  function draw() {
-    // background
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    // Parallax-ish stripes
-    ctx.save();
-    ctx.globalAlpha = 0.20;
-    ctx.fillStyle = "#ffffff";
-    for (let i=0;i<16;i++){
-      const x = (i*140 - (cameraX*0.2)%140);
-      ctx.fillRect(x, 0, 40, canvas.height);
-    }
-    ctx.restore();
-
-    // world translate (camera)
-    ctx.save();
-    ctx.translate(-cameraX, 0);
-
-    // Platforms
-    for (const p of platforms) {
-      ctx.fillStyle = "rgba(255,255,255,0.14)";
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.strokeStyle = "rgba(255,255,255,0.22)";
-      ctx.strokeRect(p.x+0.5, p.y+0.5, p.w-1, p.h-1);
-    }
-
-    // Spikes
-    for (const s of spikes) {
-      ctx.fillStyle = "rgba(255, 60, 60, 0.9)";
-      ctx.fillRect(s.x, s.y, s.w, s.h);
-      // triangle teeth
-      ctx.fillStyle = "rgba(255, 210, 210, 0.9)";
-      const teeth = Math.floor(s.w / 10);
-      for (let i=0;i<teeth;i++){
-        const tx = s.x + i*10;
+      const roundedRect = (x, y, w, h, r) => {
+        r = Math.min(r, w / 2, h / 2);
         ctx.beginPath();
-        ctx.moveTo(tx, s.y+s.h);
-        ctx.lineTo(tx+5, s.y);
-        ctx.lineTo(tx+10, s.y+s.h);
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
         ctx.closePath();
-        ctx.fill();
+      };
+
+      // ==========================
+      // ASSET: MATLAB ICON
+      // ==========================
+      const playerImg = new Image();
+      playerImg.src = "player.png";
+      let imgReady = false;
+      playerImg.onload = () => imgReady = true;
+      playerImg.onerror = () => {
+        console.warn("Player image failed to load, using fallback.");
+        imgReady = false;
+      };
+
+      const enemyImg = new Image();
+      enemyImg.src = "enemy.png";
+      let enemyImgReady = false;
+      enemyImg.onload = () => enemyImgReady = true;
+      enemyImg.onerror = () => enemyImgReady = false;
+
+      // ==========================
+      // GAME STATE
+      // ==========================
+      let state = "menu"; // menu, playing, paused, message
+      let currentLevelIndex = 0;
+
+      let score = 0;
+      let coinsCollected = 0;
+      let lives = 3;
+
+      let cameraX = 0;
+      let cameraY = 0;
+
+      // Physics tune (feels "Mario-like" without copying anything)
+      const physics = {
+        gravity: 2100,
+        moveAcc: 2900,
+        maxSpeed: 380,
+        jumpVel: 800,
+
+        frictionGround: 0.82,
+        frictionAir: 0.93,
+
+        // Quality-of-life (big upgrade)
+        coyoteTime: 0.09,      // jump allowed shortly after leaving ground
+        jumpBuffer: 0.11       // jump pressed slightly early will still trigger
+      };
+
+      // Player
+      const player = {
+        x: 0, y: 0, w: 44, h: 44,
+        vx: 0, vy: 0,
+        facing: 1,
+        onGround: false,
+        coyote: 0,
+        jumpQueued: 0,
+        invuln: 0, // seconds of invulnerability after hit
+      };
+
+      // World objects (per level)
+      let world = null;
+
+      // ==========================
+      // LEVELS
+      // ==========================
+      // Neutral visuals: platforms, spikes, coins, enemies, checkpoint, goal.
+      // You can add/edit levels by modifying these definitions.
+      const levels = [
+        {
+          name: "Level 1 - Intro",
+          width: 2400,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2280, y: 430, w: 60, h: 60 },
+          checkpoint: { x: 1200, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 2400, h: 60 },
+            { x: 220, y: 420, w: 160, h: 22 },
+            { x: 470, y: 370, w: 180, h: 22 },
+            { x: 750, y: 330, w: 150, h: 22 },
+            { x: 1000, y: 390, w: 220, h: 22 },
+            { x: 1320, y: 340, w: 180, h: 22 },
+            { x: 1620, y: 290, w: 200, h: 22 },
+            { x: 1920, y: 360, w: 220, h: 22 },
+          ],
+          movingPlatforms: [
+            // rideable, oscillating platform
+            { x1: 1460, y1: 440, x2: 1700, y2: 440, w: 110, h: 18, t: 0, speed: 0.55 }
+          ],
+          spikes: [
+            { x: 640, y: 480, w: 90, h: 20 },
+            { x: 1180, y: 480, w: 90, h: 20 },
+            { x: 2050, y: 480, w: 120, h: 20 },
+          ],
+          coins: [
+            { x: 260, y: 380 }, { x: 530, y: 330 }, { x: 790, y: 290 }, { x: 1040, y: 350 }, { x: 1350, y: 300 },
+            { x: 1660, y: 250 }, { x: 1930, y: 320 }, { x: 2100, y: 450 }, { x: 900, y: 460 }
+          ],
+          enemies: [
+            { x: 880, y: 470, w: 36, h: 28, vx: 70, minX: 820, maxX: 1040, alive: true },
+            { x: 1750, y: 470, w: 36, h: 28, vx: 80, minX: 1720, maxX: 1880, alive: true }
+          ]
+        },
+        {
+          name: "Level 2 - Moving Platforms",
+          width: 2700,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2550, y: 420, w: 60, h: 60 },
+          checkpoint: { x: 1450, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 2700, h: 60 },
+            { x: 260, y: 420, w: 170, h: 22 },
+            { x: 560, y: 360, w: 180, h: 22 },
+            { x: 860, y: 410, w: 160, h: 22 },
+            { x: 1180, y: 340, w: 200, h: 22 },
+            { x: 1760, y: 320, w: 220, h: 22 },
+            { x: 2100, y: 380, w: 200, h: 22 },
+          ],
+          movingPlatforms: [
+            { x1: 980, y1: 280, x2: 1300, y2: 280, w: 120, h: 18, t: 0, speed: 0.75 },
+            { x1: 1500, y1: 420, x2: 1500, y2: 260, w: 120, h: 18, t: 0, speed: 0.60 },
+            { x1: 2000, y1: 260, x2: 2300, y2: 260, w: 110, h: 18, t: 0, speed: 0.75 }
+          ],
+          spikes: [
+            { x: 700, y: 480, w: 120, h: 20 },
+            { x: 1520, y: 480, w: 120, h: 20 },
+            { x: 2200, y: 480, w: 160, h: 20 },
+          ],
+          coins: [
+            { x: 290, y: 380 }, { x: 590, y: 320 }, { x: 900, y: 370 }, { x: 1210, y: 300 },
+            { x: 1560, y: 220 }, { x: 1780, y: 280 }, { x: 2140, y: 340 }, { x: 2340, y: 220 }, { x: 2460, y: 460 }
+          ],
+          enemies: [
+            { x: 430, y: 470, w: 36, h: 28, vx: 85, minX: 260, maxX: 560, alive: true },
+            { x: 1900, y: 470, w: 36, h: 28, vx: 95, minX: 1820, maxX: 2080, alive: true },
+          ]
+        },
+        {
+          name: "Level 3 - Challenge",
+          width: 3000,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2850, y: 420, w: 60, h: 60 },
+          checkpoint: { x: 1650, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 3000, h: 60 },
+            { x: 260, y: 420, w: 160, h: 22 },
+            { x: 520, y: 360, w: 160, h: 22 },
+            { x: 780, y: 300, w: 160, h: 22 },
+            { x: 1040, y: 360, w: 160, h: 22 },
+            { x: 1300, y: 420, w: 160, h: 22 },
+            { x: 1900, y: 350, w: 220, h: 22 },
+            { x: 2260, y: 300, w: 170, h: 22 },
+            { x: 2520, y: 360, w: 170, h: 22 },
+          ],
+          movingPlatforms: [
+            { x1: 1500, y1: 440, x2: 1800, y2: 260, w: 120, h: 18, t: 0, speed: 0.55 },
+            { x1: 2100, y1: 440, x2: 2400, y2: 440, w: 120, h: 18, t: 0, speed: 0.80 },
+          ],
+          spikes: [
+            { x: 630, y: 480, w: 140, h: 20 },
+            { x: 1460, y: 480, w: 160, h: 20 },
+            { x: 2060, y: 480, w: 160, h: 20 },
+            { x: 2620, y: 480, w: 160, h: 20 },
+          ],
+          coins: [
+            { x: 290, y: 380 }, { x: 550, y: 320 }, { x: 810, y: 260 }, { x: 1070, y: 320 }, { x: 1330, y: 380 },
+            { x: 1540, y: 220 }, { x: 1970, y: 310 }, { x: 2310, y: 260 }, { x: 2560, y: 320 }, { x: 2760, y: 460 }
+          ],
+          enemies: [
+            { x: 980, y: 470, w: 36, h: 28, vx: 110, minX: 910, maxX: 1180, alive: true },
+            { x: 2060, y: 470, w: 36, h: 28, vx: 120, minX: 1940, maxX: 2160, alive: true },
+            { x: 2700, y: 470, w: 36, h: 28, vx: 130, minX: 2620, maxX: 2860, alive: true },
+          ]
+        }
+      ];
+
+      // ==========================
+      // BUILD WORLD FROM LEVEL
+      // ==========================
+      function loadLevel(index) {
+        currentLevelIndex = index;
+        const L = levels[index];
+
+        world = {
+          name: L.name,
+          width: L.width,
+          height: L.height,
+
+          platforms: L.platforms.map(p => ({ ...p })),
+          movingPlatforms: (L.movingPlatforms || []).map(p => ({ ...p, x: p.x1, y: p.y1, lastX: p.x1, lastY: p.y1 })),
+          spikes: (L.spikes || []).map(s => ({ ...s })),
+          enemies: (L.enemies || []).map(e => ({ ...e })),
+          checkpoint: { ...L.checkpoint },
+          goal: { ...L.goal },
+
+          coins: (L.coins || []).map(c => ({ x: c.x, y: c.y, w: 18, h: 18, taken: false })),
+
+          // respawn point starts at spawn; updates when checkpoint touched
+          respawn: { x: L.spawn.x, y: L.spawn.y },
+        };
+
+        // reset player
+        player.x = L.spawn.x;
+        player.y = L.spawn.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.onGround = false;
+        player.coyote = 0;
+        player.jumpQueued = 0;
+        player.invuln = 0;
+        player.facing = 1;
+
+        // camera
+        cameraX = 0;
+        cameraY = 0;
+
+        // per-level counters (score continues overall; coins per run)
+        coinsCollected = 0;
+
+        // UI
+        UI.level.textContent = (index + 1);
+        UI.coins.textContent = coinsCollected;
+        UI.score.textContent = score;
+        UI.lives.textContent = lives;
+        UI.high.textContent = getHigh();
       }
-    }
 
-    // Coins
-    for (const c of coins) {
-      if (c.taken) continue;
-      const cx = c.x + c.w/2, cy = c.y + c.h/2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 9, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255, 200, 0, 0.95)";
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(255,255,255,0.55)";
-      ctx.stroke();
-    }
+      // ==========================
+      // MENU BUILD
+      // ==========================
+      function buildMenu() {
+        UI.levelGrid.innerHTML = "";
+        const unlocked = getUnlocked();
 
-    // Player: draw MATLAB icon; fallback to simple shape if image not loaded
-    if (imgReady) {
-      ctx.save();
-      // slight squash when on ground (nice feel)
-      const squash = player.onGround ? 1.0 : 1.0;
-      ctx.translate(player.x + player.w/2, player.y + player.h/2);
-      ctx.scale(player.facing, 1); // flip left/right
-      ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h*squash);
-      ctx.restore();
-    } else {
-      // fallback "icon" (orange diamond)
-      ctx.fillStyle = "#ff7a00";
-      ctx.beginPath();
-      ctx.moveTo(player.x + player.w/2, player.y);
-      ctx.lineTo(player.x + player.w, player.y + player.h/2);
-      ctx.lineTo(player.x + player.w/2, player.y + player.h);
-      ctx.lineTo(player.x, player.y + player.h/2);
-      ctx.closePath();
-      ctx.fill();
-    }
+        levels.forEach((L, i) => {
+          const btn = document.createElement("button");
+          btn.className = "levelBtn" + (i + 1 <= unlocked ? "" : " locked");
+          btn.innerHTML = `
+        <div style="font-weight:700;">Level ${i + 1}</div>
+        <div style="opacity:.8; font-size:12px; margin-top:4px;">${L.name}</div>
+        <div class="tag">${i + 1 <= unlocked ? "Unlocked" : "Locked"}</div>
+      `;
+          if (i + 1 <= unlocked) {
+            btn.onclick = () => {
+              hideMenu();
+              startGame(i);
+            };
+          }
+          UI.levelGrid.appendChild(btn);
+        });
+      }
 
-    ctx.restore();
+      function showMenu() {
+        state = "menu";
+        paused = true;
+        buildMenu();
+        UI.overlayMenu.style.display = "grid";
+      }
+      function hideMenu() {
+        UI.overlayMenu.style.display = "none";
+      }
 
-    // Minimal pause overlay
-    if (paused) {
-      ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "white";
-      ctx.font = "700 34px system-ui, Segoe UI, Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("Paused", canvas.width/2, canvas.height/2);
-      ctx.font = "400 16px system-ui, Segoe UI, Arial";
-      ctx.fillText("Press Resume to continue", canvas.width/2, canvas.height/2 + 30);
-      ctx.restore();
-    }
-  }
+      // ==========================
+      // MESSAGE OVERLAY
+      // ==========================
+      function showMessage(title, body, primaryText, primaryFn, secondaryText, secondaryFn) {
+        state = "message";
+        paused = true;
+        UI.msgTitle.textContent = title;
+        UI.msgBody.textContent = body;
+        UI.msgPrimary.textContent = primaryText;
+        UI.msgSecondary.textContent = secondaryText;
 
-  // =========================
-  // MAIN LOOP
-  // =========================
-  let last = performance.now();
-  function loop(t) {
-    const dt = Math.min(0.033, (t - last) / 1000); // cap dt for stability
-    last = t;
+        UI.msgPrimary.onclick = () => { UI.overlayMsg.style.display = "none"; primaryFn?.(); };
+        UI.msgSecondary.onclick = () => { UI.overlayMsg.style.display = "none"; secondaryFn?.(); };
 
-    if (!paused) updateGame(dt);
-    draw();
+        UI.overlayMsg.style.display = "grid";
+      }
 
-    requestAnimationFrame(loop);
-  }
+      // ==========================
+      // BUTTONS
+      // ==========================
+      let paused = false;
 
-  reset();
-  requestAnimationFrame(loop);
-})();
-</script>
+      function togglePause() {
+        if (state === "menu") return;
+        paused = !paused;
+        UI.btnPause.textContent = paused ? "Resume" : "Pause";
+
+        if (paused) {
+          showMessage("Paused", "Take a break. Resume when ready.",
+            "Continue", () => { paused = false; state = "playing"; UI.btnPause.textContent = "Pause"; last = performance.now(); },
+            "Menu", () => showMenu()
+          );
+        }
+      }
+
+      UI.btnPause.onclick = togglePause;
+      UI.btnRestart.onclick = () => restartLevel();
+      UI.btnMenu.onclick = () => showMenu();
+
+      UI.btnResumeFromMenu.onclick = () => {
+        UI.overlayMenu.style.display = "none";
+        if (world) { paused = false; state = "playing"; UI.btnPause.textContent = "Pause"; last = performance.now(); }
+      };
+
+      UI.btnResetProgress.onclick = () => {
+        localStorage.removeItem(LS.unlocked);
+        localStorage.removeItem(LS.high);
+        buildMenu();
+        UI.high.textContent = "0";
+      };
+
+      // ==========================
+      // START / RESTART / RESPAWN
+      // ==========================
+      function startGame(levelIndex) {
+        if (!localStorage.getItem(LS.unlocked)) setUnlocked(1);
+        if (!localStorage.getItem(LS.high)) setHigh(0);
+
+        lives = 3;
+        score = 0;
+        UI.lives.textContent = lives;
+        UI.score.textContent = score;
+        UI.high.textContent = getHigh();
+
+        loadLevel(levelIndex);
+        paused = false;
+        state = "playing";
+        UI.btnPause.textContent = "Pause";
+        last = performance.now();
+      }
+
+      function restartLevel() {
+        // keep lives/score; reset current level to start spawn (not checkpoint)
+        const L = levels[currentLevelIndex];
+        world.respawn.x = L.spawn.x;
+        world.respawn.y = L.spawn.y;
+        loadLevel(currentLevelIndex);
+        paused = false;
+        state = "playing";
+        UI.btnPause.textContent = "Pause";
+        last = performance.now();
+      }
+
+      function respawn() {
+        player.x = world.respawn.x;
+        player.y = world.respawn.y;
+        player.vx = 0; player.vy = 0;
+        player.onGround = false;
+        player.coyote = 0;
+        player.jumpQueued = 0;
+        player.invuln = 1.2; // invulnerability after respawn
+      }
+
+      function loseLife(reason) {
+        lives--;
+        UI.lives.textContent = lives;
+
+        if (lives <= 0) {
+          const high = getHigh();
+          if (score > high) setHigh(score);
+          UI.high.textContent = getHigh();
+
+          showMessage("Game Over", `Score: ${score}. ${reason || ""}`.trim(),
+            "Restart", () => startGame(0),
+            "Menu", () => showMenu()
+          );
+        } else {
+          showMessage("Ouch!", `Lives left: ${lives}.`,
+            "Continue", () => { paused = false; state = "playing"; UI.btnPause.textContent = "Pause"; respawn(); last = performance.now(); },
+            "Restart Level", () => restartLevel()
+          );
+        }
+      }
+
+      // ==========================
+      // MOVING PLATFORMS UPDATE
+      // ==========================
+      function updateMovingPlatforms(dt) {
+        for (const p of world.movingPlatforms) {
+          p.lastX = p.x; p.lastY = p.y;
+          p.t += dt * p.speed;
+
+          // smooth oscillation between endpoints
+          const s = (Math.sin(p.t * Math.PI * 2) + 1) / 2; // 0..1
+          p.x = lerp(p.x1, p.x2, s);
+          p.y = lerp(p.y1, p.y2, s);
+          p.dx = p.x - p.lastX;
+          p.dy = p.y - p.lastY;
+        }
+      }
+
+      // ==========================
+      // COLLISION & PHYSICS
+      // ==========================
+      function resolvePlatformsX(entity, plats) {
+        for (const p of plats) {
+          if (!aabb(entity, p)) continue;
+          if (entity.vx > 0) entity.x = p.x - entity.w;
+          else if (entity.vx < 0) entity.x = p.x + p.w;
+          entity.vx = 0;
+        }
+      }
+
+      function resolvePlatformsY(entity, plats) {
+        let landedOn = null;
+        for (const p of plats) {
+          if (!aabb(entity, p)) continue;
+          if (entity.vy > 0) {
+            entity.y = p.y - entity.h;
+            entity.vy = 0;
+            entity.onGround = true;
+            landedOn = p;
+          } else if (entity.vy < 0) {
+            entity.y = p.y + p.h;
+            entity.vy = 0;
+          }
+        }
+        return landedOn;
+      }
+
+      function updatePlayer(dt) {
+        // Queue jump (buffer)
+        if (keys.has("Space") || keys.has("ArrowUp")) {
+          player.jumpQueued = physics.jumpBuffer;
+        } else {
+          player.jumpQueued = Math.max(0, player.jumpQueued - dt);
+        }
+
+        // Movement
+        const left = keys.has("ArrowLeft");
+        const right = keys.has("ArrowRight");
+        if (left) { player.vx -= physics.moveAcc * dt; player.facing = -1; }
+        if (right) { player.vx += physics.moveAcc * dt; player.facing = 1; }
+        player.vx = clamp(player.vx, -physics.maxSpeed, physics.maxSpeed);
+
+        // Gravity
+        player.vy += physics.gravity * dt;
+
+        // Friction
+        if (player.onGround) player.vx *= Math.pow(physics.frictionGround, dt * 60);
+        else player.vx *= Math.pow(physics.frictionAir, dt * 60);
+
+        // Coyote time
+        if (player.onGround) player.coyote = physics.coyoteTime;
+        else player.coyote = Math.max(0, player.coyote - dt);
+
+        // Apply jump if queued and allowed (ground or coyote)
+        if (player.jumpQueued > 0 && player.coyote > 0) {
+          player.vy = -physics.jumpVel;
+          player.onGround = false;
+          player.coyote = 0;
+          player.jumpQueued = 0;
+        }
+
+        // Update invulnerability timer
+        player.invuln = Math.max(0, player.invuln - dt);
+
+        // Combine static + moving platforms for collision resolution
+        const allPlatforms = world.platforms.concat(world.movingPlatforms);
+
+        // Horizontal step
+        player.x += player.vx * dt;
+        player.x = clamp(player.x, 0, world.width - player.w);
+        resolvePlatformsX(player, allPlatforms);
+
+        // Vertical step
+        player.y += player.vy * dt;
+        player.onGround = false;
+
+        const landedOn = resolvePlatformsY(player, allPlatforms);
+
+        // Ride moving platform (if landed on one)
+        if (landedOn && world.movingPlatforms.includes(landedOn)) {
+          player.x += landedOn.dx;
+          player.y += landedOn.dy;
+        }
+
+        // Fell out of the world
+        if (player.y > world.height + 250) {
+          loseLife("Fell off the map.");
+        }
+      }
+
+      // ==========================
+      // ENEMIES
+      // ==========================
+      function updateEnemies(dt) {
+        for (const e of world.enemies) {
+          if (!e.alive) continue;
+
+          e.x += e.vx * dt;
+          if (e.x < e.minX) { e.x = e.minX; e.vx *= -1; }
+          if (e.x + e.w > e.maxX) { e.x = e.maxX - e.w; e.vx *= -1; }
+
+          // keep enemies on ground by simple snap to ground platform (assumes ground exists)
+          // (optional: more complex nav; this is stable and clean)
+          e.y = 470; // aligned with ground top at y=500 and enemy h=28
+        }
+      }
+
+      function handleEnemyCollisions() {
+        for (const e of world.enemies) {
+          if (!e.alive) continue;
+
+          if (!aabb(player, e)) continue;
+
+          // If player is falling and hits top of enemy -> stomp
+          const playerBottom = player.y + player.h;
+          const enemyTop = e.y;
+
+          const stomp = player.vy > 50 && (playerBottom - enemyTop) < 18;
+
+          if (stomp) {
+            e.alive = false;
+            score += 250;
+            UI.score.textContent = score;
+            player.vy = -physics.jumpVel * 0.60; // bounce
+          } else {
+            // Player gets hit (unless invulnerable)
+            if (player.invuln <= 0) {
+              loseLife("Hit by an enemy.");
+            }
+          }
+        }
+      }
+
+      // ==========================
+      // COINS, CHECKPOINT, GOAL, SPIKES
+      // ==========================
+      function handlePickupsAndHazards() {
+        // Coins
+        for (const c of world.coins) {
+          if (c.taken) continue;
+          if (aabb(player, c)) {
+            c.taken = true;
+            coinsCollected++;
+            score += 100;
+            UI.coins.textContent = coinsCollected;
+            UI.score.textContent = score;
+          }
+        }
+
+        // Spikes
+        for (const s of world.spikes) {
+          if (aabb(player, s)) {
+            if (player.invuln <= 0) {
+              loseLife("Touched spikes.");
+            }
+            return;
+          }
+        }
+
+        // Checkpoint: set respawn
+        if (aabb(player, world.checkpoint)) {
+          world.respawn.x = world.checkpoint.x;
+          world.respawn.y = world.checkpoint.y - 70; // spawn slightly above
+        }
+
+        // Goal: finish level
+        if (aabb(player, world.goal)) {
+          const next = currentLevelIndex + 1;
+          const unlocked = getUnlocked();
+          if (next + 1 > unlocked && next < levels.length) {
+            setUnlocked(next + 1);
+          }
+
+          // update high score
+          const high = getHigh();
+          if (score > high) setHigh(score);
+          UI.high.textContent = getHigh();
+
+          if (next < levels.length) {
+            showMessage(
+              "Level Complete!",
+              `Nice. Score: ${score}. Next level unlocked.`,
+              "Next Level",
+              () => { paused = false; state = "playing"; loadLevel(next); last = performance.now(); },
+              "Menu",
+              () => showMenu()
+            );
+          } else {
+            showMessage(
+              "All Levels Complete!",
+              `You finished all levels. Final score: ${score}.`,
+              "Play Again",
+              () => startGame(0),
+              "Menu",
+              () => showMenu()
+            );
+          }
+        }
+      }
+
+      // ==========================
+      // CAMERA
+      // ==========================
+      function updateCamera() {
+        const targetX = player.x + player.w / 2 - canvas.width / 2;
+        cameraX = lerp(cameraX, clamp(targetX, 0, world.width - canvas.width), 0.12);
+
+        // Keep Y steady for now (nice and clean).
+        cameraY = 0;
+      }
+
+      // ==========================
+      // RENDER
+      // ==========================
+      function draw() {
+        // background
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!world) {
+          // Draw a simple loading or title screen on canvas if needed
+          ctx.fillStyle = "white";
+          ctx.font = "30px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("Super Mario Platformer", canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        // Parallax stars/stripes - changed to sky blue gradient feel
+        ctx.save();
+        ctx.globalAlpha = 0.20;
+        ctx.fillStyle = "#87CEEB"; // Sky Blue
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        for (let i = 0; i < 18; i++) {
+          const x = (i * 180 - (cameraX * 0.1) % 180);
+          ctx.beginPath();
+          ctx.arc(x, 100 + (i % 3) * 50, 40, 0, Math.PI * 2); // Simple clouds
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Translate to camera
+        ctx.save();
+        ctx.translate(-cameraX, -cameraY);
+
+        // Platforms (static) - rendered as bricks
+        for (const p of world.platforms) {
+          ctx.fillStyle = "#A52A2A"; // Brown/Brick
+          roundedRect(p.x, p.y, p.w, p.h, 4);
+          ctx.fill();
+
+          // Brick texture lines
+          ctx.strokeStyle = "rgba(0,0,0,0.3)";
+          ctx.lineWidth = 1;
+          for (let bx = 0; bx < p.w; bx += 20) {
+            ctx.beginPath();
+            ctx.moveTo(p.x + bx, p.y);
+            ctx.lineTo(p.x + bx, p.y + p.h);
+            ctx.stroke();
+          }
+        }
+
+        // Moving platforms
+        for (const p of world.movingPlatforms) {
+          ctx.fillStyle = "rgba(255, 122, 0, 0.22)";
+          roundedRect(p.x, p.y, p.w, p.h, 10);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255, 122, 0, 0.35)";
+          ctx.stroke();
+        }
+
+        // Spikes
+        for (const s of world.spikes) {
+          ctx.fillStyle = "rgba(255,60,60,0.95)";
+          roundedRect(s.x, s.y, s.w, s.h, 8);
+          ctx.fill();
+
+          // teeth
+          ctx.fillStyle = "rgba(255,220,220,0.95)";
+          const teeth = Math.floor(s.w / 10);
+          for (let i = 0; i < teeth; i++) {
+            const tx = s.x + i * 10;
+            ctx.beginPath();
+            ctx.moveTo(tx, s.y + s.h);
+            ctx.lineTo(tx + 5, s.y);
+            ctx.lineTo(tx + 10, s.y + s.h);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        // Coins
+        for (const c of world.coins) {
+          if (c.taken) continue;
+          const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255, 200, 0, 0.95)";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.stroke();
+        }
+
+        // Checkpoint marker
+        {
+          const cp = world.checkpoint;
+          // pole
+          ctx.fillStyle = "rgba(255,255,255,0.18)";
+          roundedRect(cp.x + 14, cp.y - 20, 6, cp.h + 20, 6);
+          ctx.fill();
+
+          // flag body indicates active if respawn equals checkpoint
+          const active = (Math.abs(world.respawn.x - cp.x) < 1);
+          ctx.fillStyle = active ? "rgba(45,227,140,0.95)" : "rgba(255,255,255,0.40)";
+          roundedRect(cp.x + 20, cp.y - 10, 28, 18, 6);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.25)";
+          ctx.stroke();
+        }
+
+        // Goal portal/marker
+        {
+          const g = world.goal;
+          ctx.save();
+          ctx.globalAlpha = 0.95;
+          ctx.fillStyle = "rgba(45,227,140,0.12)";
+          ctx.beginPath();
+          ctx.ellipse(g.x + g.w / 2, g.y + g.h / 2, 36, 44, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(45,227,140,0.65)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(g.x + g.w / 2, g.y + g.h / 2, 30, 38, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Enemies
+        for (const e of world.enemies) {
+          if (!e.alive) continue;
+          if (enemyImgReady) {
+            ctx.save();
+            ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
+            ctx.scale(e.vx > 0 ? 1 : -1, 1);
+            ctx.drawImage(enemyImg, -e.w / 2, -e.h / 2, e.w, e.h);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = "brown";
+            roundedRect(e.x, e.y, e.w, e.h, 4);
+            ctx.fill();
+          }
+        }
+
+        // Player (MATLAB icon)
+        if (imgReady) {
+          ctx.save();
+          // flicker when invulnerable
+          if (player.invuln > 0) ctx.globalAlpha = 0.5 + 0.5 * Math.sin(performance.now() / 60);
+
+          ctx.translate(player.x + player.w / 2, player.y + player.h / 2);
+          ctx.scale(player.facing, 1);
+          ctx.drawImage(playerImg, -player.w / 2, -player.h / 2, player.w, player.h);
+          ctx.restore();
+        } else {
+          // fallback
+          ctx.fillStyle = "#ff7a00";
+          ctx.beginPath();
+          ctx.moveTo(player.x + player.w / 2, player.y);
+          ctx.lineTo(player.x + player.w, player.y + player.h / 2);
+          ctx.lineTo(player.x + player.w / 2, player.y + player.h);
+          ctx.lineTo(player.x, player.y + player.h / 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        // subtle vignette
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        const grad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 80, canvas.width / 2, canvas.height / 2, 500);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(1, "rgba(0,0,0,0.55)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      // ==========================
+      // UPDATE LOOP
+      // ==========================
+      function update(dt) {
+        if (!world) return;
+
+        updateMovingPlatforms(dt);
+        updatePlayer(dt);
+        updateEnemies(dt);
+        handleEnemyCollisions();
+        handlePickupsAndHazards();
+        updateCamera();
+
+        // passive score over time (survival/forward motion)
+        score += Math.floor(dt * 50);
+        UI.score.textContent = score;
+
+        // keep high updated (optional)
+        const high = getHigh();
+        if (score > high) { setHigh(score); UI.high.textContent = score; }
+      }
+
+      let last = performance.now();
+      function loop(t) {
+        const dt = Math.min(0.033, (t - last) / 1000);
+        last = t;
+
+        if (state === "playing" && !paused && world) {
+          update(dt);
+        }
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      // ==========================
+      // INIT
+      // ==========================
+      UI.high.textContent = getHigh();
+
+      // Start with menu shown
+      showMenu();
+
+      // Menu default start if user wants quick play:
+      // (Uncomment to autostart level 1)
+      // startGame(0);
+
+      requestAnimationFrame(loop);
+    })();
+  </script>
 </body>
+
 </html>
