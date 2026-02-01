@@ -402,7 +402,7 @@
 
       // Player
       const player = {
-        x: 0, y: 0, w: 44, h: 44,
+        x: 0, y: 0, w: 60, h: 60,
         vx: 0, vy: 0,
         facing: 1,
         onGround: false,
@@ -451,8 +451,8 @@
             { x: 1660, y: 250 }, { x: 1930, y: 320 }, { x: 2100, y: 450 }, { x: 900, y: 460 }
           ],
           enemies: [
-            { x: 880, y: 470, w: 36, h: 28, vx: 70, minX: 820, maxX: 1040, alive: true },
-            { x: 1750, y: 470, w: 36, h: 28, vx: 80, minX: 1720, maxX: 1880, alive: true }
+            { x: 880, y: 450, w: 50, h: 50, vx: 70, minX: 820, maxX: 1040, alive: true },
+            { x: 1750, y: 450, w: 50, h: 50, vx: 80, minX: 1720, maxX: 1880, alive: true }
           ]
         },
         {
@@ -486,8 +486,8 @@
             { x: 1560, y: 220 }, { x: 1780, y: 280 }, { x: 2140, y: 340 }, { x: 2340, y: 220 }, { x: 2460, y: 460 }
           ],
           enemies: [
-            { x: 430, y: 470, w: 36, h: 28, vx: 85, minX: 260, maxX: 560, alive: true },
-            { x: 1900, y: 470, w: 36, h: 28, vx: 95, minX: 1820, maxX: 2080, alive: true },
+            { x: 430, y: 450, w: 50, h: 50, vx: 85, minX: 260, maxX: 560, alive: true },
+            { x: 1900, y: 450, w: 50, h: 50, vx: 95, minX: 1820, maxX: 2080, alive: true },
           ]
         },
         {
@@ -523,9 +523,9 @@
             { x: 1540, y: 220 }, { x: 1970, y: 310 }, { x: 2310, y: 260 }, { x: 2560, y: 320 }, { x: 2760, y: 460 }
           ],
           enemies: [
-            { x: 980, y: 470, w: 36, h: 28, vx: 110, minX: 910, maxX: 1180, alive: true },
-            { x: 2060, y: 470, w: 36, h: 28, vx: 120, minX: 1940, maxX: 2160, alive: true },
-            { x: 2700, y: 470, w: 36, h: 28, vx: 130, minX: 2620, maxX: 2860, alive: true },
+            { x: 980, y: 450, w: 50, h: 50, vx: 110, minX: 910, maxX: 1180, alive: true },
+            { x: 2060, y: 450, w: 50, h: 50, vx: 120, minX: 1940, maxX: 2160, alive: true },
+            { x: 2700, y: 450, w: 50, h: 50, vx: 130, minX: 2620, maxX: 2860, alive: true },
           ]
         }
       ];
@@ -860,7 +860,7 @@
 
           // keep enemies on ground by simple snap to ground platform (assumes ground exists)
           // (optional: more complex nav; this is stable and clean)
-          e.y = 470; // aligned with ground top at y=500 and enemy h=28
+          e.y = 450; // Aligned with ground top (500) - enemy h (50)
         }
       }
 
