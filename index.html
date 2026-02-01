@@ -251,6 +251,7 @@
         <button id="btnMenu">Menu</button>
         <button id="btnRestart">Restart</button>
         <button id="btnPause">Pause</button>
+        <button id="btnMusic">Music: On</button>
         <button id="btnFull">Full Screen</button>
       </div>
     </div>
@@ -327,6 +328,7 @@
         msgPrimary: document.getElementById('msgPrimary'),
         msgSecondary: document.getElementById('msgSecondary'),
         btnFull: document.getElementById('btnFull'),
+        btnMusic: document.getElementById('btnMusic'),
         time: document.getElementById('uiTime'),
         touch: document.getElementById('touch'),
         tLeft: document.getElementById('tLeft'),
@@ -663,6 +665,8 @@
       }
       function hideMenu() {
         UI.overlayMenu.style.display = "none";
+        // Attempt to start music on any menu hide (user interaction)
+        Music.start();
       }
 
       // ==========================
@@ -693,8 +697,9 @@
         UI.btnPause.textContent = paused ? "Resume" : "Pause";
 
         if (paused) {
+          Music.pause();
           showMessage("Paused", "Take a break. Resume when ready.",
-            "Continue", () => { paused = false; state = "playing"; UI.btnPause.textContent = "Pause"; last = performance.now(); },
+            "Continue", () => { paused = false; state = "playing"; UI.btnPause.textContent = "Pause"; Music.resume(); last = performance.now(); },
             "Menu", () => showMenu()
           );
         }
@@ -734,6 +739,122 @@
         UI.score.textContent = "0";
         UI.lives.textContent = "3";
       };
+
+      // ==========================
+      // MUSIC SYSTEM (Web Audio API)
+      // ==========================
+      const Music = (() => {
+        let ctx = null;
+        let masterGain = null;
+        let isPlaying = false;
+        let isMuted = false;
+        let timer = null;
+
+        // Frequencies for Mario Theme
+        const F = {
+          E5: 659.25, D5: 587.33, C5: 523.25, G4: 392.00, G5: 783.99,
+          A4: 440.00, B4: 493.88, AS4: 466.16, F5: 698.46, E4: 329.63,
+          A5: 880.00, B5: 987.77, AS5: 932.33, GS4: 415.30, G3: 196.00
+        };
+
+        const theme = [
+          // Intro
+          [F.E5, 0.15], [F.E5, 0.3], [F.E5, 0.3], [F.C5, 0.15], [F.E5, 0.3], [F.G5, 0.6], [F.G4, 0.6],
+          // Main Part
+          [F.C5, 0.45], [F.G4, 0.45], [F.E4, 0.45], [F.A4, 0.3], [F.B4, 0.3], [F.AS4, 0.15], [F.A4, 0.3],
+          [F.G4, 0.2], [F.E5, 0.2], [F.G5, 0.2], [F.A5, 0.3], [F.F5, 0.15], [F.G5, 0.3],
+          [F.E5, 0.3], [F.C5, 0.15], [F.D5, 0.15], [F.B4, 0.3],
+          // Repeat Main Part
+          [F.C5, 0.45], [F.G4, 0.45], [F.E4, 0.45], [F.A4, 0.3], [F.B4, 0.3], [F.AS4, 0.15], [F.A4, 0.3],
+          [F.G4, 0.2], [F.E5, 0.2], [F.G5, 0.2], [F.A5, 0.3], [F.F5, 0.15], [F.G5, 0.3],
+          [F.E5, 0.3], [F.C5, 0.15], [F.D5, 0.15], [F.B4, 0.3]
+        ];
+
+        function init() {
+          if (ctx) return;
+          console.log("Initializing AudioContext...");
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          masterGain = ctx.createGain();
+          masterGain.gain.value = 0.3; // Increased volume
+          masterGain.connect(ctx.destination);
+        }
+
+        function playNote(freq, duration, startTime) {
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          g.gain.setValueAtTime(0, startTime);
+          g.gain.linearRampToValueAtTime(0.2, startTime + 0.05); // Rapid attack
+          g.gain.linearRampToValueAtTime(0, startTime + duration); // Smooth decay
+
+          osc.connect(g);
+          g.connect(masterGain);
+
+          osc.start(startTime);
+          osc.stop(startTime + duration + 0.1);
+        }
+
+        function playTheme(loop = true) {
+          if (!ctx) return;
+          if (isPlaying) return;
+
+          isPlaying = true;
+          console.log("Playing theme...");
+          let time = ctx.currentTime + 0.1;
+
+          theme.forEach(note => {
+            playNote(note[0], note[1], time);
+            time += note[1] + 0.05;
+          });
+
+          if (loop) {
+            const delay = (time - ctx.currentTime) * 1000;
+            timer = setTimeout(() => {
+              isPlaying = false;
+              if (!paused && state === "playing") playTheme(true);
+            }, delay);
+          }
+        }
+
+        function start() {
+          init();
+          console.log("Attempting to start music... State:", ctx.state);
+          // Browsers require a resume() call within a user interaction handler
+          ctx.resume().then(() => {
+            console.log("AudioContext resumed. State:", ctx.state);
+            if (!isPlaying && !isMuted) {
+              playTheme();
+            }
+          });
+        }
+
+        return {
+          start,
+          stop: () => {
+            console.log("Stopping music...");
+            if (timer) clearTimeout(timer);
+            isPlaying = false;
+          },
+          toggle: () => {
+            isMuted = !isMuted;
+            if (masterGain) masterGain.gain.value = isMuted ? 0 : 0.3;
+            UI.btnMusic.textContent = isMuted ? "Music: Off" : "Music: On";
+            if (!isMuted) start();
+          },
+          pause: () => {
+            if (ctx && ctx.state === 'running') ctx.suspend();
+          },
+          resume: () => {
+            if (ctx && ctx.state === 'suspended') ctx.resume();
+          }
+        };
+      })();
+
+      UI.btnMusic.onclick = () => Music.toggle();
 
       // ==========================
       // START / RESTART / RESPAWN
