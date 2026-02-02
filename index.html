@@ -270,7 +270,7 @@
         <button id="btnRestart">Restart</button>
         <button id="btnPause">Pause</button>
         <button id="btnFull">Full Screen</button>
-        <button id="btnMute">Mute</button>
+        <button id="btnMute">Unmute</button>
       </div>
     </div>
 
@@ -834,7 +834,7 @@
       const AudioEngine = (() => {
         let ctx = null;
         let masterGain = null;
-        let isMuted = false;
+        let isMuted = true;
 
         const NOTES = {
           B0: 30.87, C1: 32.70, D1: 36.71, E1: 41.20, F1: 43.65, G1: 49.00, A1: 55.00, B1: 61.74,
