@@ -264,6 +264,7 @@
         <button id="btnRestart">Restart</button>
         <button id="btnPause">Pause</button>
         <button id="btnFull">Full Screen</button>
+        <button id="btnMute">Mute</button>
       </div>
     </div>
 
@@ -341,6 +342,7 @@
         msgPrimary: document.getElementById('msgPrimary'),
         msgSecondary: document.getElementById('msgSecondary'),
         btnFull: document.getElementById('btnFull'),
+        btnMute: document.getElementById('btnMute'),
         time: document.getElementById('uiTime'),
         touch: document.getElementById('touch'),
         tLeft: document.getElementById('tLeft'),
@@ -742,6 +744,13 @@
         }
       };
 
+      UI.btnMute.onclick = () => {
+        const muted = AudioEngine.toggleMute();
+        UI.btnMute.textContent = muted ? "Unmute" : "Mute";
+        // Also ensure context is running if they clicked mute first thing
+        AudioEngine.init();
+      };
+
       document.addEventListener('fullscreenchange', () => {
         UI.btnFull.textContent = document.fullscreenElement ? "Exit Full" : "Full Screen";
       });
@@ -765,6 +774,97 @@
       // ==========================
       // MUSIC SYSTEM (Web Audio API)
       // ==========================
+      const AudioEngine = (() => {
+        let ctx = null;
+        let masterGain = null;
+        let isMuted = false;
+
+        const NOTES = {
+          B0: 30.87, C1: 32.70, D1: 36.71, E1: 41.20, F1: 43.65, G1: 49.00, A1: 55.00, B1: 61.74,
+          C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.00, A2: 110.00, B2: 123.47,
+          C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+          C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+          C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
+          C6: 1046.50, D6: 1174.66, E6: 1318.51, F6: 1396.91, G6: 1567.98, A6: 1760.00, B6: 1975.53
+        };
+
+        // Simplified Mario Overworld Theme (Key of C)
+        // [Note, Duration (1.0 = beat)]
+        // Tempo ~ 100bpm => 600ms per beat? Mario is fast, let's say 150ms per 16th note.
+        // We'll use a tick system.
+        const marioTheme = [
+          // Intro
+          ['E5', 0.15], ['E5', 0.30], ['E5', 0.30], ['C5', 0.15], ['E5', 0.30], ['G5', 0.60], ['G4', 0.60],
+          // Theme A
+          ['C5', 0.45], ['G4', 0.45], ['E4', 0.45], ['A4', 0.30], ['B4', 0.30], ['A#4', 0.15], ['A4', 0.30],
+          ['G4', 0.20], ['E5', 0.20], ['G5', 0.20], ['A5', 0.30], ['F5', 0.15], ['G5', 0.30],
+          ['E5', 0.30], ['C5', 0.15], ['D5', 0.15], ['B4', 0.30],
+          // Repeat A slightly diff
+          ['C5', 0.45], ['G4', 0.45], ['E4', 0.45], ['A4', 0.30], ['B4', 0.30], ['A#4', 0.15], ['A4', 0.30],
+          ['G4', 0.20], ['E5', 0.20], ['G5', 0.20], ['A5', 0.30], ['F5', 0.15], ['G5', 0.30],
+          ['E5', 0.30], ['C5', 0.15], ['D5', 0.15], ['B4', 0.30]
+        ];
+
+        let noteIndex = 0;
+        let nextNoteTime = 0;
+        let isPlaying = false;
+
+        function init() {
+          if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = ctx.createGain();
+            masterGain.gain.value = 0.10; // Low volume so it's not annoying
+            masterGain.connect(ctx.destination);
+          }
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+        }
+
+        function playTone(freq, duration) {
+          if (!ctx || isMuted) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = 'square'; // NES style
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+          // Envelope: Attack (fast), Decay
+          gain.gain.setValueAtTime(0.01, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(masterGain.gain.value, ctx.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration - 0.02);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start();
+          osc.stop(ctx.currentTime + duration);
+        }
+
+        function update(dt) {
+          if (!isPlaying || !ctx) return;
+
+          if (ctx.currentTime >= nextNoteTime) {
+            const [note, dur] = marioTheme[noteIndex];
+            const freq = NOTES[note];
+            if (freq) {
+              playTone(freq, dur * 0.9); // Staccato
+            }
+            // Advance
+            nextNoteTime = ctx.currentTime + dur;
+            noteIndex = (noteIndex + 1) % marioTheme.length;
+          }
+        }
+
+        return {
+          init,
+          start: () => { init(); isPlaying = true; nextNoteTime = ctx ? ctx.currentTime : 0; noteIndex = 0; },
+          stop: () => { isPlaying = false; },
+          update,
+          toggleMute: () => { isMuted = !isMuted; return isMuted; }
+        };
+      })();
+
       // START / RESTART / RESPAWN
       // ==========================
       function startGame(levelIndex) {
@@ -782,6 +882,7 @@
         state = "playing";
         UI.btnPause.textContent = "Pause";
         last = performance.now();
+        AudioEngine.start();
       }
 
       function restartLevel() {
@@ -1339,6 +1440,7 @@
 
         if (state === "playing" && !paused && world) {
           update(dt);
+          AudioEngine.update(dt);
         }
         draw();
         requestAnimationFrame(loop);
