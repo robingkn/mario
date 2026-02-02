@@ -29,6 +29,13 @@
       color: var(--fg);
       background: linear-gradient(180deg, var(--bg1), var(--bg2));
       overflow: hidden;
+      /* Mobile Polish: Prevent selection, scrolling, and zooming */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
     }
 
     .wrap {
@@ -75,6 +82,10 @@
       border-radius: 12px;
       transition: transform .06s ease, border-color .15s ease;
       backdrop-filter: blur(10px);
+      /* Mobile Polish */
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     button:hover {
@@ -376,6 +387,19 @@
       bindTouch(UI.tLeft, "ArrowLeft");
       bindTouch(UI.tRight, "ArrowRight");
       bindTouch(UI.tJump, "Space");
+
+      // ==========================
+      // MOBILE POLISH HANDLERS
+      // ==========================
+      // Prevent long-press context menu
+      window.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+      }, { passive: false });
+
+      // Prevent potential elastic scrolling / pull-to-refresh
+      document.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+      }, { passive: false });
 
       // ==========================
       // UTILITIES
