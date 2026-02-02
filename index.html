@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Super Mario Platformer</title>
   <style>
+    /* =========================================
+       1. VARIABLES & RESET
+       ========================================= */
     :root {
       --bg1: #5c94fc;
       --bg2: #b4e2ff;
@@ -24,14 +27,13 @@
 
     body {
       margin: 0;
-      margin: 0;
       min-height: 100vh;
       min-height: 100dvh;
-      /* Mobile viewport fix */
       font-family: system-ui, Segoe UI, Arial;
       color: var(--fg);
       background: linear-gradient(180deg, var(--bg1), var(--bg2));
       overflow: hidden;
+
       /* Mobile Polish: Prevent selection, scrolling, and zooming */
       user-select: none;
       -webkit-user-select: none;
@@ -41,6 +43,9 @@
       overscroll-behavior: none;
     }
 
+    /* =========================================
+       2. LAYOUT & TYPOGRAPHY
+       ========================================= */
     .wrap {
       width: min(1100px, 100%);
       margin: 0 auto;
@@ -56,6 +61,17 @@
       flex-wrap: wrap;
     }
 
+    .help {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* =========================================
+       3. COMPONENTS (Controls, UI)
+       ========================================= */
+    /* Pill (Stats Display) */
     .pill {
       background: var(--panel);
       border: 1px solid rgba(255, 255, 255, .14);
@@ -71,11 +87,13 @@
       color: #fff;
     }
 
+    /* Buttons Group */
     .btns {
       display: flex;
       gap: 10px;
     }
 
+    /* Base Button */
     button {
       cursor: pointer;
       color: var(--fg);
@@ -85,7 +103,6 @@
       border-radius: 12px;
       transition: transform .06s ease, border-color .15s ease;
       backdrop-filter: blur(10px);
-      /* Mobile Polish */
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       -webkit-user-select: none;
@@ -99,6 +116,64 @@
       transform: scale(.98);
     }
 
+    /* Button Variants */
+    .btn-primary {
+      background: linear-gradient(180deg, #ffce00, #eeb200);
+      color: #7b4900;
+      /* Mario Coin Gold */
+      border: 2px solid #fff;
+      font-weight: 800;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #ffd933, #ffce00);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px solid transparent;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Level Selection Buttons */
+    .levelBtn {
+      text-align: left;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    .levelBtn.locked {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .levelBtn .tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    /* =========================================
+       4. GAME CANVAS & FULLSCREEN
+       ========================================= */
     canvas {
       width: 100%;
       height: auto;
@@ -109,14 +184,48 @@
       display: block;
     }
 
-    .help {
-      margin-top: 10px;
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.35;
+    /* Fullscreen State */
+    canvas:fullscreen,
+    .wrap:fullscreen canvas {
+      border-radius: 0;
+      border: none;
+      height: 100vh;
+      width: auto;
+      margin: 0 auto;
     }
 
-    /* Overlay screens (menu / pause / win / gameover) */
+    .wrap:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg1);
+    }
+
+    .wrap:fullscreen .topbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 100;
+    }
+
+    .wrap:fullscreen .help {
+      display: none;
+    }
+
+    .wrap:fullscreen .overlay {
+      position: absolute;
+      z-index: 200;
+    }
+
+    /* =========================================
+       5. OVERLAYS (Menu, Pause, Win)
+       ========================================= */
     .overlay {
       position: fixed;
       inset: 0;
@@ -138,33 +247,10 @@
       padding: 24px;
       box-shadow:
         0 8px 0 rgba(0, 0, 0, 0.2),
-        /* "3D" edge */
         0 20px 40px rgba(0, 0, 0, 0.4);
       text-align: center;
       color: #fff;
       animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    @keyframes popIn {
-      from {
-        transform: scale(0.8);
-        opacity: 0;
-      }
-
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
     }
 
     .card h1 {
@@ -192,61 +278,32 @@
       margin-top: 12px;
     }
 
-    /* Button Variants */
-    .btn-primary {
-      background: linear-gradient(180deg, #ffce00, #eeb200);
-      /* Mario Coin Gold */
-      color: #7b4900;
-      border: 2px solid #fff;
-      font-weight: 800;
-      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
-      text-transform: uppercase;
-      font-size: 14px;
-      letter-spacing: 0.5px;
+    /* Animations */
+    @keyframes popIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
-    .btn-primary:hover {
-      background: linear-gradient(180deg, #ffd933, #ffce00);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
-    .btn-secondary {
-      background: rgba(0, 0, 0, 0.2);
-      border: 2px solid transparent;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(0, 0, 0, 0.3);
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .levelBtn {
-      text-align: left;
-      padding: 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, .06);
-      border: 1px solid rgba(255, 255, 255, .14);
-    }
-
-    .levelBtn.locked {
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
-    .levelBtn .tag {
-      display: inline-block;
-      margin-top: 8px;
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .08);
-      border: 1px solid rgba(255, 255, 255, .14);
-    }
-
-    /* Mobile touch controls */
+    /* =========================================
+       6. MOBILE CONTROLS
+       ========================================= */
     .touch {
       position: fixed;
       left: 0;
@@ -279,46 +336,6 @@
       .touch {
         display: flex;
       }
-    }
-
-    canvas:fullscreen,
-    .wrap:fullscreen canvas {
-      border-radius: 0;
-      border: none;
-      height: 100vh;
-      width: auto;
-      margin: 0 auto;
-    }
-
-    .wrap:fullscreen {
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      /* Center content */
-      background: var(--bg1);
-    }
-
-    .wrap:fullscreen .topbar {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      z-index: 100;
-    }
-
-    .wrap:fullscreen .help {
-      display: none;
-    }
-
-    .wrap:fullscreen .overlay {
-      position: absolute;
-      /* Needed for full-screen centering */
-      z-index: 200;
     }
   </style>
 </head>
@@ -438,32 +455,39 @@
       const setHigh = (n) => localStorage.setItem(LS.high, String(n));
 
       // ==========================
-      // INPUT
+      // INPUT SYSTEM
       // ==========================
-      const keys = new Set();
-      const press = (code) => keys.add(code);
-      const release = (code) => keys.delete(code);
+      const Input = {
+        keys: new Set(),
 
-      addEventListener('keydown', (e) => {
-        if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "Escape"].includes(e.code)) e.preventDefault();
-        if (e.code === "Escape") togglePause();
-        keys.add(e.code);
-      }, { passive: false });
+        init() {
+          addEventListener('keydown', (e) => {
+            if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "Escape"].includes(e.code)) e.preventDefault();
+            if (e.code === "Escape") togglePause();
+            this.keys.add(e.code);
+          }, { passive: false });
 
-      addEventListener('keyup', (e) => keys.delete(e.code));
+          addEventListener('keyup', (e) => this.keys.delete(e.code));
+        },
 
-      // Touch buttons map to keyboard codes
-      const bindTouch = (btn, code) => {
-        const down = (e) => { e.preventDefault(); press(code); };
-        const up = (e) => { e.preventDefault(); release(code); };
-        btn.addEventListener('pointerdown', down, { passive: false });
-        btn.addEventListener('pointerup', up, { passive: false });
-        btn.addEventListener('pointercancel', up, { passive: false });
-        btn.addEventListener('pointerleave', up, { passive: false });
+        bindTouch(btn, code) {
+          const down = (e) => { e.preventDefault(); this.keys.add(code); };
+          const up = (e) => { e.preventDefault(); this.keys.delete(code); };
+          btn.addEventListener('pointerdown', down, { passive: false });
+          btn.addEventListener('pointerup', up, { passive: false });
+          btn.addEventListener('pointercancel', up, { passive: false });
+          btn.addEventListener('pointerleave', up, { passive: false });
+        },
+
+        isDown(code) {
+          return this.keys.has(code);
+        }
       };
-      bindTouch(UI.tLeft, "ArrowLeft");
-      bindTouch(UI.tRight, "ArrowRight");
-      bindTouch(UI.tJump, "Space");
+
+      Input.init();
+      Input.bindTouch(UI.tLeft, "ArrowLeft");
+      Input.bindTouch(UI.tRight, "ArrowRight");
+      Input.bindTouch(UI.tJump, "Space");
 
       // ==========================
       // MOBILE POLISH HANDLERS
@@ -566,116 +590,7 @@
       // ==========================
       // Neutral visuals: platforms, spikes, coins, enemies, checkpoint, goal.
       // You can add/edit levels by modifying these definitions.
-      const levels = [
-        {
-          name: "Level 1 - Intro",
-          width: 2400,
-          height: canvas.height,
-          spawn: { x: 80, y: 200 },
-          goal: { x: 2280, y: 430, w: 60, h: 60 },
-          checkpoint: { x: 1200, y: 420, w: 34, h: 70 },
-          platforms: [
-            { x: 0, y: 500, w: 2400, h: 60 },
-            { x: 220, y: 420, w: 160, h: 22 },
-            { x: 470, y: 370, w: 180, h: 22 },
-            { x: 750, y: 330, w: 150, h: 22 },
-            { x: 1000, y: 390, w: 220, h: 22 },
-            { x: 1320, y: 340, w: 180, h: 22 },
-            { x: 1620, y: 290, w: 200, h: 22 },
-            { x: 1920, y: 360, w: 220, h: 22 },
-          ],
-          movingPlatforms: [
-            // rideable, oscillating platform
-            { x1: 1460, y1: 440, x2: 1700, y2: 440, w: 110, h: 18, t: 0, speed: 0.55 }
-          ],
-          spikes: [
-            { x: 640, y: 480, w: 90, h: 20 },
-            { x: 1180, y: 480, w: 90, h: 20 },
-            { x: 2050, y: 480, w: 120, h: 20 },
-          ],
-          coins: [
-            { x: 260, y: 380 }, { x: 530, y: 330 }, { x: 790, y: 290 }, { x: 1040, y: 350 }, { x: 1350, y: 300 },
-            { x: 1660, y: 250 }, { x: 1930, y: 320 }, { x: 2100, y: 450 }, { x: 900, y: 460 }
-          ],
-          enemies: [
-            { x: 880, y: 450, w: 50, h: 50, vx: 70, minX: 820, maxX: 1040, alive: true },
-            { x: 1750, y: 450, w: 50, h: 50, vx: 80, minX: 1720, maxX: 1880, alive: true }
-          ]
-        },
-        {
-          name: "Level 2 - Moving Platforms",
-          width: 2700,
-          height: canvas.height,
-          spawn: { x: 80, y: 200 },
-          goal: { x: 2550, y: 420, w: 60, h: 60 },
-          checkpoint: { x: 1450, y: 420, w: 34, h: 70 },
-          platforms: [
-            { x: 0, y: 500, w: 2700, h: 60 },
-            { x: 260, y: 420, w: 170, h: 22 },
-            { x: 560, y: 360, w: 180, h: 22 },
-            { x: 860, y: 410, w: 160, h: 22 },
-            { x: 1180, y: 340, w: 200, h: 22 },
-            { x: 1760, y: 320, w: 220, h: 22 },
-            { x: 2100, y: 380, w: 200, h: 22 },
-          ],
-          movingPlatforms: [
-            { x1: 980, y1: 280, x2: 1300, y2: 280, w: 120, h: 18, t: 0, speed: 0.75 },
-            { x1: 1500, y1: 420, x2: 1500, y2: 260, w: 120, h: 18, t: 0, speed: 0.60 },
-            { x1: 2000, y1: 260, x2: 2300, y2: 260, w: 110, h: 18, t: 0, speed: 0.75 }
-          ],
-          spikes: [
-            { x: 700, y: 480, w: 120, h: 20 },
-            { x: 1520, y: 480, w: 120, h: 20 },
-            { x: 2200, y: 480, w: 160, h: 20 },
-          ],
-          coins: [
-            { x: 290, y: 380 }, { x: 590, y: 320 }, { x: 900, y: 370 }, { x: 1210, y: 300 },
-            { x: 1560, y: 220 }, { x: 1780, y: 280 }, { x: 2140, y: 340 }, { x: 2340, y: 220 }, { x: 2460, y: 460 }
-          ],
-          enemies: [
-            { x: 430, y: 450, w: 50, h: 50, vx: 85, minX: 260, maxX: 560, alive: true },
-            { x: 1900, y: 450, w: 50, h: 50, vx: 95, minX: 1820, maxX: 2080, alive: true },
-          ]
-        },
-        {
-          name: "Level 3 - Challenge",
-          width: 3000,
-          height: canvas.height,
-          spawn: { x: 80, y: 200 },
-          goal: { x: 2850, y: 420, w: 60, h: 60 },
-          checkpoint: { x: 1650, y: 420, w: 34, h: 70 },
-          platforms: [
-            { x: 0, y: 500, w: 3000, h: 60 },
-            { x: 260, y: 420, w: 160, h: 22 },
-            { x: 520, y: 360, w: 160, h: 22 },
-            { x: 780, y: 300, w: 160, h: 22 },
-            { x: 1040, y: 360, w: 160, h: 22 },
-            { x: 1300, y: 420, w: 160, h: 22 },
-            { x: 1900, y: 350, w: 220, h: 22 },
-            { x: 2260, y: 300, w: 170, h: 22 },
-            { x: 2520, y: 360, w: 170, h: 22 },
-          ],
-          movingPlatforms: [
-            { x1: 1500, y1: 440, x2: 1800, y2: 260, w: 120, h: 18, t: 0, speed: 0.55 },
-            { x1: 2100, y1: 440, x2: 2400, y2: 440, w: 120, h: 18, t: 0, speed: 0.80 },
-          ],
-          spikes: [
-            { x: 630, y: 480, w: 140, h: 20 },
-            { x: 1460, y: 480, w: 160, h: 20 },
-            { x: 2060, y: 480, w: 160, h: 20 },
-            { x: 2620, y: 480, w: 160, h: 20 },
-          ],
-          coins: [
-            { x: 290, y: 380 }, { x: 550, y: 320 }, { x: 810, y: 260 }, { x: 1070, y: 320 }, { x: 1330, y: 380 },
-            { x: 1540, y: 220 }, { x: 1970, y: 310 }, { x: 2310, y: 260 }, { x: 2560, y: 320 }, { x: 2760, y: 460 }
-          ],
-          enemies: [
-            { x: 980, y: 450, w: 50, h: 50, vx: 110, minX: 910, maxX: 1180, alive: true },
-            { x: 2060, y: 450, w: 50, h: 50, vx: 120, minX: 1940, maxX: 2160, alive: true },
-            { x: 2700, y: 450, w: 50, h: 50, vx: 130, minX: 2620, maxX: 2860, alive: true },
-          ]
-        }
-      ];
+      // (Levels definition moved to end of file)
 
       // ==========================
       // BUILD WORLD FROM LEVEL
@@ -1231,15 +1146,15 @@
 
       function updatePlayer(dt) {
         // Queue jump (buffer)
-        if (keys.has("Space") || keys.has("ArrowUp")) {
+        if (Input.isDown("Space") || Input.isDown("ArrowUp")) {
           player.jumpQueued = physics.jumpBuffer;
         } else {
           player.jumpQueued = Math.max(0, player.jumpQueued - dt);
         }
 
         // Movement
-        const left = keys.has("ArrowLeft");
-        const right = keys.has("ArrowRight");
+        const left = Input.isDown("ArrowLeft");
+        const right = Input.isDown("ArrowRight");
         if (left) { player.vx -= physics.moveAcc * dt; player.facing = -1; }
         if (right) { player.vx += physics.moveAcc * dt; player.facing = 1; }
         player.vx = clamp(player.vx, -physics.maxSpeed, physics.maxSpeed);
@@ -1428,40 +1343,32 @@
       // ==========================
       // RENDER
       // ==========================
-      function draw() {
-        // background
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (!world) {
-          // Draw a simple loading or title screen on canvas if needed
-          ctx.fillStyle = "white";
-          ctx.font = "30px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText("Super Mario Platformer", canvas.width / 2, canvas.height / 2);
-          return;
-        }
-
-        // Parallax stars/stripes - changed to sky blue gradient feel
+      // ==========================
+      // RENDER SYSTEM
+      // ==========================
+      function drawBackground(ctx) {
+        // Sky Blue background
         ctx.save();
         ctx.globalAlpha = 0.20;
-        ctx.fillStyle = "#87CEEB"; // Sky Blue
+        ctx.fillStyle = "#87CEEB";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
 
+      function drawParallax(ctx, camX) {
+        ctx.save();
         ctx.fillStyle = "rgba(255,255,255,0.3)";
         for (let i = 0; i < 18; i++) {
-          const x = (i * 180 - (cameraX * 0.1) % 180);
+          const x = (i * 180 - (camX * 0.1) % 180);
           ctx.beginPath();
           ctx.arc(x, 100 + (i % 3) * 50, 40, 0, Math.PI * 2); // Simple clouds
           ctx.fill();
         }
         ctx.restore();
+      }
 
-        // Translate to camera
-        ctx.save();
-        ctx.scale(zoom, zoom);
-        ctx.translate(-cameraX, -cameraY);
-
-        // Platforms (static) - rendered as bricks
+      function drawPlatforms(ctx) {
+        // Static Platforms
         for (const p of world.platforms) {
           ctx.fillStyle = "#A52A2A"; // Brown/Brick
           roundedRect(p.x, p.y, p.w, p.h, 4);
@@ -1486,8 +1393,9 @@
           ctx.strokeStyle = "rgba(255, 122, 0, 0.35)";
           ctx.stroke();
         }
+      }
 
-        // Thorns (Spikes) - Metallic Sharp Look
+      function drawSpikes(ctx) {
         for (const s of world.spikes) {
           ctx.save();
           const grad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
@@ -1520,8 +1428,9 @@
           }
           ctx.restore();
         }
+      }
 
-        // Coins - Rotating 3D effect
+      function drawCoins(ctx) {
         const coinTime = performance.now() / 200;
         for (const c of world.coins) {
           if (c.taken) continue;
@@ -1559,63 +1468,62 @@
           ctx.shadowColor = "rgba(255, 230, 0, 0.5)";
         }
         ctx.shadowBlur = 0;
+      }
 
-        // Checkpoint marker
-        {
-          const cp = world.checkpoint;
-          // pole
-          ctx.fillStyle = "rgba(255,255,255,0.18)";
-          roundedRect(cp.x + 14, cp.y - 20, 6, cp.h + 20, 6);
-          ctx.fill();
+      function drawCheckpoint(ctx) {
+        const cp = world.checkpoint;
+        // pole
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        roundedRect(cp.x + 14, cp.y - 20, 6, cp.h + 20, 6);
+        ctx.fill();
 
-          // flag body indicates active if respawn equals checkpoint
-          const active = (Math.abs(world.respawn.x - cp.x) < 1);
-          ctx.fillStyle = active ? "rgba(45,227,140,0.95)" : "rgba(255,255,255,0.40)";
-          roundedRect(cp.x + 20, cp.y - 10, 28, 18, 6);
-          ctx.fill();
-          ctx.strokeStyle = "rgba(255,255,255,0.25)";
-          ctx.stroke();
-        }
+        // flag body indicates active if respawn equals checkpoint
+        const active = (Math.abs(world.respawn.x - cp.x) < 1);
+        ctx.fillStyle = active ? "rgba(45,227,140,0.95)" : "rgba(255,255,255,0.40)";
+        roundedRect(cp.x + 20, cp.y - 10, 28, 18, 6);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.stroke();
+      }
 
-        // Goal - Mario Pipe
-        {
-          const g = world.goal;
-          ctx.save();
+      function drawGoal(ctx) {
+        const g = world.goal;
+        ctx.save();
 
-          // Pipe Body
-          const pGrad = ctx.createLinearGradient(g.x, g.y, g.x + g.w, g.y);
-          pGrad.addColorStop(0, "#006400");
-          pGrad.addColorStop(0.3, "#32CD32");
-          pGrad.addColorStop(0.5, "#90EE90");
-          pGrad.addColorStop(0.7, "#32CD32");
-          pGrad.addColorStop(1, "#006400");
+        // Pipe Body
+        const pGrad = ctx.createLinearGradient(g.x, g.y, g.x + g.w, g.y);
+        pGrad.addColorStop(0, "#006400");
+        pGrad.addColorStop(0.3, "#32CD32");
+        pGrad.addColorStop(0.5, "#90EE90");
+        pGrad.addColorStop(0.7, "#32CD32");
+        pGrad.addColorStop(1, "#006400");
 
-          ctx.fillStyle = pGrad;
-          ctx.fillRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
-          ctx.strokeStyle = "rgba(0,0,0,0.4)";
-          ctx.strokeRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
+        ctx.fillStyle = pGrad;
+        ctx.fillRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
+        ctx.strokeStyle = "rgba(0,0,0,0.4)";
+        ctx.strokeRect(g.x + 5, g.y + 15, g.w - 10, g.h - 15);
 
-          // Pipe Top (Lip)
-          ctx.fillStyle = pGrad;
-          ctx.fillRect(g.x, g.y, g.w, 15);
-          ctx.strokeRect(g.x, g.y, g.w, 15);
+        // Pipe Top (Lip)
+        ctx.fillStyle = pGrad;
+        ctx.fillRect(g.x, g.y, g.w, 15);
+        ctx.strokeRect(g.x, g.y, g.w, 15);
 
-          // Inner Darkness (The hole)
-          ctx.fillStyle = "rgba(0,0,0,0.6)";
-          ctx.fillRect(g.x + 4, g.y + 2, g.w - 8, 4);
+        // Inner Darkness (The hole)
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(g.x + 4, g.y + 2, g.w - 8, 4);
 
-          // Glow from the pipe
-          const glow = Math.sin(performance.now() / 300) * 10 + 20;
-          ctx.shadowBlur = glow;
-          ctx.shadowColor = "#32CD32";
-          ctx.strokeStyle = "rgba(50, 205, 50, 0.5)";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(g.x, g.y, g.w, 15);
+        // Glow from the pipe
+        const glow = Math.sin(performance.now() / 300) * 10 + 20;
+        ctx.shadowBlur = glow;
+        ctx.shadowColor = "#32CD32";
+        ctx.strokeStyle = "rgba(50, 205, 50, 0.5)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(g.x, g.y, g.w, 15);
 
-          ctx.restore();
-        }
+        ctx.restore();
+      }
 
-        // Enemies
+      function drawEnemies(ctx) {
         for (const e of world.enemies) {
           if (!e.alive) continue;
           if (enemyImgReady) {
@@ -1630,8 +1538,9 @@
             ctx.fill();
           }
         }
+      }
 
-        // Player (MATLAB icon)
+      function drawPlayer(ctx) {
         if (imgReady) {
           ctx.save();
           // flicker when invulnerable
@@ -1652,10 +1561,9 @@
           ctx.closePath();
           ctx.fill();
         }
+      }
 
-        ctx.restore();
-
-        // subtle vignette
+      function drawVignette(ctx) {
         ctx.save();
         ctx.globalAlpha = 0.25;
         const grad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 80, canvas.width / 2, canvas.height / 2, 500);
@@ -1664,6 +1572,40 @@
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
+      }
+
+      function draw() {
+        // Clear
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!world) {
+          // Draw a simple loading or title screen on canvas if needed
+          ctx.fillStyle = "white";
+          ctx.font = "30px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("Super Mario Platformer", canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        drawBackground(ctx);
+        drawParallax(ctx, cameraX);
+
+        // Camera Transform
+        ctx.save();
+        ctx.scale(zoom, zoom);
+        ctx.translate(-cameraX, -cameraY);
+
+        drawPlatforms(ctx);
+        drawSpikes(ctx);
+        drawCoins(ctx);
+        drawCheckpoint(ctx);
+        drawGoal(ctx);
+        drawEnemies(ctx);
+        drawPlayer(ctx);
+
+        ctx.restore();
+
+        drawVignette(ctx);
       }
 
       // ==========================
@@ -1703,6 +1645,120 @@
         draw();
         requestAnimationFrame(loop);
       }
+
+      // ==========================
+      // LEVELS DATA
+      // ==========================
+      const levels = [
+        {
+          name: "Level 1 - Intro",
+          width: 2400,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2280, y: 430, w: 60, h: 60 },
+          checkpoint: { x: 1200, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 2400, h: 60 },
+            { x: 220, y: 420, w: 160, h: 22 },
+            { x: 470, y: 370, w: 180, h: 22 },
+            { x: 750, y: 330, w: 150, h: 22 },
+            { x: 1000, y: 390, w: 220, h: 22 },
+            { x: 1320, y: 340, w: 180, h: 22 },
+            { x: 1620, y: 290, w: 200, h: 22 },
+            { x: 1920, y: 360, w: 220, h: 22 },
+          ],
+          movingPlatforms: [
+            // rideable, oscillating platform
+            { x1: 1460, y1: 440, x2: 1700, y2: 440, w: 110, h: 18, t: 0, speed: 0.55 }
+          ],
+          spikes: [
+            { x: 640, y: 480, w: 90, h: 20 },
+            { x: 1180, y: 480, w: 90, h: 20 },
+            { x: 2050, y: 480, w: 120, h: 20 },
+          ],
+          coins: [
+            { x: 260, y: 380 }, { x: 530, y: 330 }, { x: 790, y: 290 }, { x: 1040, y: 350 }, { x: 1350, y: 300 },
+            { x: 1660, y: 250 }, { x: 1930, y: 320 }, { x: 2100, y: 450 }, { x: 900, y: 460 }
+          ],
+          enemies: [
+            { x: 880, y: 450, w: 50, h: 50, vx: 70, minX: 820, maxX: 1040, alive: true },
+            { x: 1750, y: 450, w: 50, h: 50, vx: 80, minX: 1720, maxX: 1880, alive: true }
+          ]
+        },
+        {
+          name: "Level 2 - Moving Platforms",
+          width: 2700,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2550, y: 420, w: 60, h: 60 },
+          checkpoint: { x: 1450, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 2700, h: 60 },
+            { x: 260, y: 420, w: 170, h: 22 },
+            { x: 560, y: 360, w: 180, h: 22 },
+            { x: 860, y: 410, w: 160, h: 22 },
+            { x: 1180, y: 340, w: 200, h: 22 },
+            { x: 1760, y: 320, w: 220, h: 22 },
+            { x: 2100, y: 380, w: 200, h: 22 },
+          ],
+          movingPlatforms: [
+            { x1: 980, y1: 280, x2: 1300, y2: 280, w: 120, h: 18, t: 0, speed: 0.75 },
+            { x1: 1500, y1: 420, x2: 1500, y2: 260, w: 120, h: 18, t: 0, speed: 0.60 },
+            { x1: 2000, y1: 260, x2: 2300, y2: 260, w: 110, h: 18, t: 0, speed: 0.75 }
+          ],
+          spikes: [
+            { x: 700, y: 480, w: 120, h: 20 },
+            { x: 1520, y: 480, w: 120, h: 20 },
+            { x: 2200, y: 480, w: 160, h: 20 },
+          ],
+          coins: [
+            { x: 290, y: 380 }, { x: 590, y: 320 }, { x: 900, y: 370 }, { x: 1210, y: 300 },
+            { x: 1560, y: 220 }, { x: 1780, y: 280 }, { x: 2140, y: 340 }, { x: 2340, y: 220 }, { x: 2460, y: 460 }
+          ],
+          enemies: [
+            { x: 430, y: 450, w: 50, h: 50, vx: 85, minX: 260, maxX: 560, alive: true },
+            { x: 1900, y: 450, w: 50, h: 50, vx: 95, minX: 1820, maxX: 2080, alive: true },
+          ]
+        },
+        {
+          name: "Level 3 - Challenge",
+          width: 3000,
+          height: canvas.height,
+          spawn: { x: 80, y: 200 },
+          goal: { x: 2850, y: 420, w: 60, h: 60 },
+          checkpoint: { x: 1650, y: 420, w: 34, h: 70 },
+          platforms: [
+            { x: 0, y: 500, w: 3000, h: 60 },
+            { x: 260, y: 420, w: 160, h: 22 },
+            { x: 520, y: 360, w: 160, h: 22 },
+            { x: 780, y: 300, w: 160, h: 22 },
+            { x: 1040, y: 360, w: 160, h: 22 },
+            { x: 1300, y: 420, w: 160, h: 22 },
+            { x: 1900, y: 350, w: 220, h: 22 },
+            { x: 2260, y: 300, w: 170, h: 22 },
+            { x: 2520, y: 360, w: 170, h: 22 },
+          ],
+          movingPlatforms: [
+            { x1: 1500, y1: 440, x2: 1800, y2: 260, w: 120, h: 18, t: 0, speed: 0.55 },
+            { x1: 2100, y1: 440, x2: 2400, y2: 440, w: 120, h: 18, t: 0, speed: 0.80 },
+          ],
+          spikes: [
+            { x: 630, y: 480, w: 140, h: 20 },
+            { x: 1460, y: 480, w: 160, h: 20 },
+            { x: 2060, y: 480, w: 160, h: 20 },
+            { x: 2620, y: 480, w: 160, h: 20 },
+          ],
+          coins: [
+            { x: 290, y: 380 }, { x: 550, y: 320 }, { x: 810, y: 260 }, { x: 1070, y: 320 }, { x: 1330, y: 380 },
+            { x: 1540, y: 220 }, { x: 1970, y: 310 }, { x: 2310, y: 260 }, { x: 2560, y: 320 }, { x: 2760, y: 460 }
+          ],
+          enemies: [
+            { x: 980, y: 450, w: 50, h: 50, vx: 110, minX: 910, maxX: 1180, alive: true },
+            { x: 2060, y: 450, w: 50, h: 50, vx: 120, minX: 1940, maxX: 2160, alive: true },
+            { x: 2700, y: 450, w: 50, h: 50, vx: 130, minX: 2620, maxX: 2860, alive: true },
+          ]
+        }
+      ];
 
       // ==========================
       // INIT
