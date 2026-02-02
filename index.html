@@ -122,36 +122,105 @@
       inset: 0;
       display: none;
       place-items: center;
-      background: rgba(0, 0, 0, .55);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, .65);
+      backdrop-filter: blur(8px);
       padding: 16px;
       z-index: 10;
+      animation: fadeIn 0.2s ease-out;
     }
 
     .card {
-      width: min(720px, 100%);
-      background: rgba(92, 148, 252, .95);
-      border: 1px solid rgba(255, 255, 255, .18);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 24px 90px rgba(0, 0, 0, .55);
+      width: min(600px, 95%);
+      /* "Nintendo Blue" Style: Bright, friendly, toy-like */
+      background: linear-gradient(180deg, #5b99ff, #256cdf);
+      border: 4px solid #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow:
+        0 8px 0 rgba(0, 0, 0, 0.2),
+        /* "3D" edge */
+        0 20px 40px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      color: #fff;
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     .card h1 {
-      margin: 8px 0 0;
-      font-size: 24px;
+      margin: 0 0 16px 0;
+      font-size: 32px;
+      color: #fff;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+      font-weight: 800;
+      letter-spacing: 0.5px;
     }
 
     .card p {
-      margin: 8px 0;
-      color: var(--muted);
+      margin: 8px 0 28px;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 17px;
+      line-height: 1.4;
+      font-weight: 500;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
+      gap: 12px;
       margin-top: 12px;
+    }
+
+    /* Button Variants */
+    .btn-primary {
+      background: linear-gradient(180deg, #ffce00, #eeb200);
+      /* Mario Coin Gold */
+      color: #7b4900;
+      border: 2px solid #fff;
+      font-weight: 800;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #ffd933, #ffce00);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px solid transparent;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     .levelBtn {
@@ -287,9 +356,9 @@
         <h1>Super Mario Platformer</h1>
         <p>Pick a level. Finish a level to unlock the next. Your high score is saved locally.</p>
         <div class="grid" id="levelGrid"></div>
-        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-          <button id="btnResumeFromMenu">Resume</button>
-          <button id="btnResetProgress">Reset Progress</button>
+        <div style="display:flex; gap:12px; margin-top:24px; justify-content:center; flex-wrap:wrap;">
+          <button id="btnResumeFromMenu" class="btn-primary">Resume</button>
+          <button id="btnResetProgress" class="btn-secondary">Reset Progress</button>
         </div>
         <p style="margin-top:10px; font-size:13px;">Assets: <b>player.png</b> and <b>enemy.png</b> should be present.
         </p>
@@ -709,7 +778,9 @@
         UI.msgTitle.textContent = title;
         UI.msgBody.textContent = body;
         UI.msgPrimary.textContent = primaryText;
+        UI.msgPrimary.className = "btn-primary";
         UI.msgSecondary.textContent = secondaryText;
+        UI.msgSecondary.className = "btn-secondary";
 
         UI.msgPrimary.onclick = () => { UI.overlayMsg.style.display = "none"; primaryFn?.(); };
         UI.msgSecondary.onclick = () => { UI.overlayMsg.style.display = "none"; secondaryFn?.(); };
