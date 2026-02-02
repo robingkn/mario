@@ -24,7 +24,10 @@
 
     body {
       margin: 0;
+      margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
+      /* Mobile viewport fix */
       font-family: system-ui, Segoe UI, Arial;
       color: var(--fg);
       background: linear-gradient(180deg, var(--bg1), var(--bg2));
@@ -221,10 +224,13 @@
     .wrap:fullscreen {
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       padding: 0;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      align-items: center;
+      /* Center content */
       background: var(--bg1);
     }
 
@@ -753,7 +759,58 @@
 
       document.addEventListener('fullscreenchange', () => {
         UI.btnFull.textContent = document.fullscreenElement ? "Exit Full" : "Full Screen";
+        handleResize(); // Trigger resize on toggle
       });
+
+      // ==========================
+      // VIEWPORT / RESIZE HANDLER
+      // ==========================
+      function handleResize() {
+        const wrap = document.querySelector('.wrap');
+        const isFull = !!document.fullscreenElement;
+
+        let availableWidth, availableHeight;
+
+        if (isFull) {
+          availableWidth = window.innerWidth;
+          availableHeight = window.innerHeight;
+        } else {
+          // Not fullscreen: respect the wrap's normal layout
+          // But since the wrap is responsive, we look at the viewport or container?
+          // Actually, let's just make the canvas responsive in the flow.
+          // Since .wrap has a max-width of 1100px or 100%, we fit inside that.
+          // However, to fix "layout breaks", we really want to just ensure the canvas fits.
+
+          // We'll trust CSS for non-fullscreen usually, BUT to prevent clipped UI
+          // let's just ensure standard responsiveness.
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+          return;
+        }
+
+        // Fullscreen Logic: Letterboxing
+        const targetRatio = 1000 / 560; // 1.78
+        const winRatio = availableWidth / availableHeight;
+
+        let w, h;
+        if (winRatio > targetRatio) {
+          // Window is wider than game -> limit by height
+          h = availableHeight;
+          w = h * targetRatio;
+        } else {
+          // Window is taller than game -> limit by width
+          w = availableWidth;
+          h = w / targetRatio;
+        }
+
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        canvas.style.flex = "none"; // Stop flex from messing with size
+      }
+
+      window.addEventListener('resize', handleResize);
+      // Initial call
+      handleResize();
 
       UI.btnResumeFromMenu.onclick = () => {
         UI.overlayMenu.style.display = "none";
