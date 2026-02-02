@@ -913,12 +913,61 @@
           }
         }
 
+        function playJump() {
+          if (!ctx || isMuted) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(150, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.1, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        }
+
+        function playCoin() {
+          if (!ctx || isMuted) return;
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(988, t);
+          osc.frequency.setValueAtTime(1319, t + 0.08);
+          gain.gain.setValueAtTime(0.1, t);
+          gain.gain.linearRampToValueAtTime(0, t + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(t + 0.3);
+        }
+
+        function playStomp() {
+          if (!ctx || isMuted) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        }
+
         return {
           init,
           start: () => { init(); isPlaying = true; nextNoteTime = ctx ? ctx.currentTime : 0; noteIndex = 0; },
           stop: () => { isPlaying = false; },
           update,
-          toggleMute: () => { isMuted = !isMuted; return isMuted; }
+          toggleMute: () => { isMuted = !isMuted; return isMuted; },
+          playJump,
+          playCoin,
+          playStomp
         };
       })();
 
@@ -1064,6 +1113,7 @@
           player.onGround = false;
           player.coyote = 0;
           player.jumpQueued = 0;
+          AudioEngine.playJump();
         }
 
         // Update invulnerability timer
@@ -1129,6 +1179,7 @@
             score += 100; // Mario Goomba score
             UI.score.textContent = fmtScore(score);
             player.vy = -physics.jumpVel * 0.60; // bounce
+            AudioEngine.playStomp();
           } else {
             // Player gets hit (unless invulnerable)
             if (player.invuln <= 0) {
@@ -1144,13 +1195,13 @@
       function handlePickupsAndHazards() {
         // Coins
         for (const c of world.coins) {
-          if (c.taken) continue;
-          if (aabb(player, c)) {
+          if (!c.taken && aabb(player, c)) {
             c.taken = true;
+            score += 200;
             coinsCollected++;
-            score += 200; // Mario Coin score
-            UI.coins.textContent = coinsCollected;
             UI.score.textContent = fmtScore(score);
+            UI.coins.textContent = coinsCollected;
+            AudioEngine.playCoin();
           }
         }
 
